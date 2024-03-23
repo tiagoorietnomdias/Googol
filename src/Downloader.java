@@ -9,7 +9,6 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 
-
 public class Downloader {
     public static void sendMessage(String message) throws IOException {
         Properties properties = new Properties();
@@ -39,7 +38,7 @@ public class Downloader {
     public static void messageBuilder(ArrayList<String> words, int maximumSize, int type) throws IOException {
         int wordsLength = words.size();
         int currentIndex = 0;
-        while (currentIndex < wordsLength - 1) {//enquanto n ta vazio, encher msg
+        while (currentIndex < wordsLength - 1) {// enquanto n ta vazio, encher msg
             StringBuilder messageToSend;
             if (type == 1) {
                 messageToSend = new StringBuilder("downloader|words|");
@@ -49,7 +48,8 @@ public class Downloader {
 
             String elementToGet = words.get(currentIndex);
 
-            while (messageToSend.toString().getBytes().length + elementToGet.getBytes().length < maximumSize && currentIndex < wordsLength - 1) { //while(messageToSend<tamanhomaximo(50kB)){
+            while (messageToSend.toString().getBytes().length + elementToGet.getBytes().length < maximumSize
+                    && currentIndex < wordsLength - 1) { // while(messageToSend<tamanhomaximo(50kB)){
 
                 messageToSend.append(elementToGet);
                 messageToSend.append("|");
@@ -57,13 +57,12 @@ public class Downloader {
                 elementToGet = words.get(currentIndex);
             }
             System.out.println(messageToSend.toString());
-            //System.out.println(messageToSend.toString().getBytes().length);
+            // System.out.println(messageToSend.toString().getBytes().length);
             sendMessage(messageToSend.toString());
         }
 
-
-        //    messageToSend+=words.next()
-        //}
+        // messageToSend+=words.next()
+        // }
 
     }
 
@@ -84,7 +83,8 @@ public class Downloader {
         }
     }
 
-    public static void LinkScraper(String url, ArrayList<String> palavrasEncontradas, ArrayList<String> linksEncontrados) {
+    public static void LinkScraper(String url, ArrayList<String> palavrasEncontradas,
+            ArrayList<String> linksEncontrados) {
         File stopwordsFile = new File("stopwords_pt.txt");
         loadStopwords("stopwords_pt.txt"); // Load stopwords before scraping
 
@@ -108,12 +108,11 @@ public class Downloader {
             e.printStackTrace();
         }
     }
-    //for(String palavra:palavrasEncontradas) System.out.println(palavra);
-    //for(String link:linksEncontrados) System.out.println(link);
-    //enviar palavra a palavra até não haver mais
+    // for(String palavra:palavrasEncontradas) System.out.println(palavra);
+    // for(String link:linksEncontrados) System.out.println(link);
+    // enviar palavra a palavra até não haver mais
 
-    //enviar link a link até não haver mais
-
+    // enviar link a link até não haver mais
 
     public static void main(String args[]) throws IOException {
         String url = args[0];
@@ -123,17 +122,18 @@ public class Downloader {
         LinkScraper(url, words, links);
 
         // 1= Words 0= links
-        messageBuilder(words, 50 * 1024,1);
-        messageBuilder(links, 50 * 1024,0);
+        messageBuilder(words, 50 * 1024, 1);
+        messageBuilder(links, 50 * 1024, 0);
 
         // Step 3: Send the message built to sendMessage
-        /*try {
-            sendMessage("your_message_here", "your_ip_address_here", your_port_here);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-*/
+        /*
+         * try {
+         * sendMessage("your_message_here", "your_ip_address_here", your_port_here);
+         * } catch (IOException e) {
+         * e.printStackTrace();
+         * }
+         * }
+         */
     }
 
 }
