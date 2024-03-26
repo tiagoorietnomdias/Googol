@@ -10,6 +10,8 @@ import java.util.*;
 public class Downloader {
     private static final String STOPWORDS_FILE = "stopwords_pt.txt";
     private static final int MAX_MESSAGE_SIZE = 50 * 1024;
+    private static int downloaderID;
+    private static int packetID=0;
 
     private static Properties loadProperties(String filename) throws IOException {
         Properties properties = new Properties();
@@ -20,6 +22,7 @@ public class Downloader {
     }
 
     private static void sendMessage(String message, String ipAddress, int port) throws IOException {
+        //Todo: implement reliable multicast
         try (DatagramSocket socket = new DatagramSocket()) {
             InetAddress group = InetAddress.getByName(ipAddress);
             byte[] msg = message.getBytes();
@@ -38,8 +41,8 @@ public class Downloader {
 
         while (currentIndex < wordsLength) {
             StringBuilder messageToSend = new StringBuilder();
-            String prefix = (type == 1) ? "downloader|" + url + "|words|" : "downloader|" + url + "|links|";
-
+            String prefix = (type == 1) ? packetID+"|downloader|" + url + "|words|" : packetID+"|downloader|" + url + "|links|";
+            packetID+=1;
             while (currentIndex < wordsLength && getStringSizeInBytes(prefix + words.get(currentIndex)) < MAX_MESSAGE_SIZE) {
                 messageToSend.append(prefix).append(words.get(currentIndex)).append("|");
                 currentIndex++;
@@ -90,7 +93,6 @@ public class Downloader {
             e.printStackTrace();
         }
     }
-
     public static void main(String[] args) throws IOException {
         if (args.length == 0) {
             System.out.println("Usage: java Downloader <url>");

@@ -3,7 +3,9 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Properties;
 
 public class BarrelMulticast {
 
@@ -12,13 +14,12 @@ public class BarrelMulticast {
 
     private HashMap<String, HashSet<String>> wordLinkMap = new HashMap<>();
 
-    public static HashMap<String, HashSet<String>> updateWordHashMap(HashMap<String, HashSet<String>> map, String word, String link) {
-        map.computeIfAbsent(word, k -> new HashSet<>()).add(link);
-        return map;
+    public HashMap<String, HashSet<String>> updateWordHashMap(String word, String link) {
+        wordLinkMap.computeIfAbsent(word, k -> new HashSet<>()).add(link);
+        return wordLinkMap;
     }
 
-
-    public static void receiveMessage() throws IOException {
+    public void receiveMessage() throws IOException {
         Properties properties = new Properties();
         try (FileInputStream input = new FileInputStream(PROPERTIES_FILE_PATH)) {
             properties.load(input);
@@ -43,8 +44,7 @@ public class BarrelMulticast {
         }
     }
 
-
-    private static void processMessage(String message) {
+    private void processMessage(String message) {
         String[] parts = message.split("\\|");
 
         if (parts.length < 3 || !parts[0].equals("downloader")) {
@@ -57,11 +57,16 @@ public class BarrelMulticast {
 
         } else if (type.equals("words")) {
             System.out.println("Processing words...");
-
+            // Extract word and link from the message and update the database
+            //String word = parts[3];
+            //String link = parts[4];
+            //updateWordHashMap(word, link);
+            // Perform any other necessary actions related to word processing
         }
     }
 
     public static void main(String[] args) throws IOException {
-        receiveMessage();
+        BarrelMulticast barrel = new BarrelMulticast();
+        barrel.receiveMessage();
     }
 }
