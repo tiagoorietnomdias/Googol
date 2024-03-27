@@ -5,13 +5,29 @@ import org.jsoup.select.Elements;
 
 import java.io.*;
 import java.net.*;
+import java.rmi.Naming;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
-public class Downloader {
+public class Downloader extends UnicastRemoteObject implements IDownloader {
     private static final String STOPWORDS_FILE = "stopwords_pt.txt";
     private static final int MAX_MESSAGE_SIZE = 50 * 1024;
     private static int downloaderID;
-    private static int packetID=0;
+    private static int packetID = 0;
+    private IGateway gateway;
+
+    public Downloader() throws RemoteException {
+        super();
+        try {
+            gateway = (IGateway) Naming.lookup("Gateway");
+        } catch (NotBoundException | MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+        gateway.subscribe((IDownloader) this);
+        System.out.println("Client sent subscription to server");
+    }
 
     private static Properties loadProperties(String filename) throws IOException {
         Properties properties = new Properties();
@@ -41,8 +57,8 @@ public class Downloader {
 
         while (currentIndex < wordsLength) {
             StringBuilder messageToSend = new StringBuilder();
-            String prefix = (type == 1) ? packetID+"|downloader|" + url + "|words|" : packetID+"|downloader|" + url + "|links|";
-            packetID+=1;
+            String prefix = (type == 1) ? packetID + "|downloader|" + url + "|words|" : packetID + "|downloader|" + url + "|links|";
+            packetID += 1;
             while (currentIndex < wordsLength && getStringSizeInBytes(prefix + words.get(currentIndex)) < MAX_MESSAGE_SIZE) {
                 messageToSend.append(prefix).append(words.get(currentIndex)).append("|");
                 currentIndex++;
@@ -93,6 +109,30 @@ public class Downloader {
             e.printStackTrace();
         }
     }
+
+    private void run(String url) {
+        while(true) {
+            List<String> words = new ArrayList<>();
+            List<String> links = new ArrayList<>();
+
+            LinkScraper(url, words, links);
+
+            try {
+                messageBuilder(new ArrayList<>(words), 1, url);
+                messageBuilder(new ArrayList<>(links), 0, url);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+
+            gateway.putLinksInQueue(links);
+
+            //wait for notify signal
+            gateway.getLastLink();
+            //repeat
+        }
+    }
+
     public static void main(String[] args) throws IOException {
         if (args.length == 0) {
             System.out.println("Usage: java Downloader <url>");
@@ -100,12 +140,7 @@ public class Downloader {
         }
 
         String url = args[0];
-        List<String> words = new ArrayList<>();
-        List<String> links = new ArrayList<>();
-
-        LinkScraper(url, words, links);
-
-        messageBuilder(new ArrayList<>(words), 1, url);
-        messageBuilder(new ArrayList<>(links), 0, url);
+        Downloader downloader = new Downloader();
+        downloader.run(url);
     }
 }
