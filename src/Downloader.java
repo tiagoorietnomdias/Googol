@@ -125,7 +125,11 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
             }
 
 
-            gateway.putLinksInQueue(links);
+            try {
+                gateway.putLinksInQueue(links);
+            } catch(RemoteException e){
+                e.printStackTrace();
+            }
 
             //wait for notify signal
             try {
