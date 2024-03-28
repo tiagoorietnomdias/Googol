@@ -25,7 +25,7 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
         } catch (NotBoundException | MalformedURLException e) {
             throw new RuntimeException(e);
         }
-        gateway.subscribe((IDownloader) this);
+        downloaderID = gateway.subscribeDownloader((IDownloader) this);
         System.out.println("Client sent subscription to server");
     }
 
@@ -57,10 +57,11 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
 
         while (currentIndex < wordsLength) {
             StringBuilder messageToSend = new StringBuilder();
-            String prefix = (type == 1) ? packetID + "|downloader|" + url + "|words|" : packetID + "|downloader|" + url + "|links|";
+            String prefix = (type == 1) ? packetID + "|downloader|" + downloaderID + "|" + url + "|words|" : packetID + "|downloader|" + downloaderID + "|" + url + "|links|";
             packetID += 1;
+            messageToSend.append(prefix);
             while (currentIndex < wordsLength && getStringSizeInBytes(prefix + words.get(currentIndex)) < MAX_MESSAGE_SIZE) {
-                messageToSend.append(prefix).append(words.get(currentIndex)).append("|");
+                messageToSend.append(words.get(currentIndex)).append("|");
                 currentIndex++;
             }
 
@@ -111,12 +112,11 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
     }
 
     private void run(String url) {
-        while(true) {
+        while (true) {
             List<String> words = new ArrayList<>();
             List<String> links = new ArrayList<>();
 
             LinkScraper(url, words, links);
-
             try {
                 messageBuilder(new ArrayList<>(words), 1, url);
                 messageBuilder(new ArrayList<>(links), 0, url);
@@ -128,7 +128,11 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
             gateway.putLinksInQueue(links);
 
             //wait for notify signal
-            gateway.getLastLink();
+            try {
+                url = gateway.getLastLink();
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
             //repeat
         }
     }

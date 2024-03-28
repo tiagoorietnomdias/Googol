@@ -7,5 +7,5 @@ public interface IGateway extends Remote{
 
     void putLinksInQueue(List<String> links);
 
-    void getLastLink();
+    String getLastLink() throws RemoteException;
 }
