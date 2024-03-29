@@ -16,16 +16,16 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
     private static final int MAX_MESSAGE_SIZE = 50 * 1024;
     private static int downloaderID;
     private static int packetID = 0;
-    private IGateway gateway;
+    private IGateDownloader gateway;
 
     public Downloader() throws RemoteException {
         super();
         try {
-            gateway = (IGateway) Naming.lookup("Gateway");
+            gateway = (IGateDownloader) Naming.lookup("GatewayDownloader");
         } catch (NotBoundException | MalformedURLException e) {
             throw new RuntimeException(e);
         }
-        downloaderID = gateway.subscribeDownloader((IDownloader) this);
+        downloaderID = gateway.subscribeDownloader(this);
         System.out.println("Client sent subscription to server");
     }
 

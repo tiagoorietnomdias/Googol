@@ -8,29 +8,39 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class Gateway extends UnicastRemoteObject implements IGateway{
+public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGateBarrel{
 
 
     public ArrayList<IDownloader> downloaders;
+    public ArrayList<IBarrel> barrels;
     public int queue[];
     ArrayDeque<String> linkQueue = new ArrayDeque<>();
-    public Gateway() throws IOException{
+    public Gateway() throws IOException, AlreadyBoundException {
         super();
+        //String serverHostname = "192.168.245.239";
+        //System.setProperty("java.rmi.server.hostname", serverHostname);
+
         queue = new int[10];
         downloaders = new ArrayList<>();
-        LocateRegistry.createRegistry(1099); //maybe fazer isto automaticamente dando load ao system properties
+        barrels = new ArrayList<>();
+        Registry downloaderRegistry = LocateRegistry.createRegistry(1099);
+        Registry barrelRegistry = LocateRegistry.createRegistry(1098);
 
-        try{
-            Naming.rebind("Gateway", (IGateway)this);
-        } catch (MalformedURLException e){
-            throw new RuntimeException(e);
-        }
+
+        barrelRegistry.rebind("GatewayBarrel", this);
+        downloaderRegistry.rebind("GatewayDownloader", this);
     }
+
 
     @Override
     public int subscribeDownloader(IDownloader d) throws RemoteException{
         downloaders.add(d);
         return downloaders.indexOf(d);
+    }
+    @Override
+    public int subscribeBarrel(IBarrel b) throws RemoteException{
+        barrels.add(b);
+        return barrels.indexOf(b);
     }
 
     @Override
@@ -47,7 +57,7 @@ public class Gateway extends UnicastRemoteObject implements IGateway{
     public static void main(String args[]) {
         try {
             Gateway gateway = new Gateway();
-        } catch (IOException e) {
+        } catch (IOException | AlreadyBoundException e) {
             throw new RuntimeException(e);
         }
 
