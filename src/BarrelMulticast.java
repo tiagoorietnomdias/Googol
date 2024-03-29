@@ -51,6 +51,7 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel,Serializ
         ipAddress = properties.getProperty("ipAddress");
 
         filePath= "output"+barrelID+".txt";
+        System.out.println(filePath);
     }
 
     public void printWordLinkMap() {
@@ -135,13 +136,27 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel,Serializ
         //portanto se packetID-packetIDanterior >1 n ta bem
         if (packetID - packetCounter.get(downloaderID) > 1) {//Falhou pelo menos um pacote
             //mecanismo de recuperação
+            System.out.println("someth missin");
+            System.out.println("packetID"+packetID);
+            System.out.println("current index in array"+packetCounter.get(downloaderID));
         } else {
-            packetCounter.set(downloaderID, packetCounter.get(packetID));
+            packetCounter.set(downloaderID, packetID);
+
             if (filePath != null) {
-                FileWriter fileWriter = new FileWriter(filePath);
-                BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
-                bufferedWriter.write(message);
-                bufferedWriter.write("*");
+                try {
+                    FileWriter fileWriter = new FileWriter(filePath, true); // 'true' indicates append mode
+                    BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
+                    System.out.println(message);
+                    bufferedWriter.write(message);
+                    bufferedWriter.newLine(); // Writes a newline character
+                    bufferedWriter.flush(); // Flushes the buffer
+                    bufferedWriter.close(); // Closes the writer
+                    System.out.println("Data appended to file successfully.");
+                } catch (IOException e) {
+                    System.err.println("Error writing to file: " + e.getMessage());
+                    e.printStackTrace();
+                }
+
             } else {
                 System.err.println("File path is null. Cannot create FileWriter.");
             }
