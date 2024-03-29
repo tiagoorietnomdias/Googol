@@ -111,7 +111,7 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
         }
     }
 
-    private void run(String url) {
+    private void run(String url) throws RemoteException {
         while (true) {
             List<String> words = new ArrayList<>();
             List<String> links = new ArrayList<>();
