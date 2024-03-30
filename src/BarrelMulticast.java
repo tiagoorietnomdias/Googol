@@ -115,13 +115,10 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel, Seriali
 
     private void acknowledgeReception() throws IOException {
         String message = "shuptidu";
-        try (DatagramSocket socket = new DatagramSocket()) {
             InetAddress group = InetAddress.getByName(ipAddress);
             byte[] msg = message.getBytes();
             DatagramPacket packet = new DatagramPacket(msg, msg.length, group, getPortFromProperties());
-            socket.send(packet);
-        }
-
+            this.send(packet);
     }
 
     //Protocolo: packetID|downloader|downloaderID|LinkAtual|words/links|....
@@ -143,6 +140,7 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel, Seriali
         //portanto se packetID-packetIDanterior >1 n ta bem
         if (packetID - packetCounter.get(downloaderID) > 1) {//Falhou pelo menos um pacote
             //mecanismo de recuperação
+
             System.out.println("someth missin");
             System.out.println("packetID" + packetID);
             System.out.println("current index in array" + packetCounter.get(downloaderID));

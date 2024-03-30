@@ -3,6 +3,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import javax.net.ssl.SSLHandshakeException;
 import java.io.*;
 import java.net.*;
 import java.rmi.Naming;
@@ -39,15 +40,16 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
 
     private static int sendMessage(String message, String ipAddress, int port) throws IOException {
 
-        try (DatagramSocket socket = new DatagramSocket()) {
+        try (MulticastSocket socket = new MulticastSocket(port)) {
             InetAddress group = InetAddress.getByName(ipAddress);
+            socket.joinGroup(group);
             byte[] msg = message.getBytes();
             DatagramPacket packet = new DatagramPacket(msg, msg.length, group, port);
             int retries = 0;
 
             while (retries < 3) {
                 socket.send(packet);
-                socket.setSoTimeout(5000);
+                socket.setSoTimeout(1);
 
                 byte[] buf = new byte[1024];
                 DatagramPacket acknowledgmentPacket = new DatagramPacket(buf, buf.length);
@@ -60,6 +62,7 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
                     retries++;
                     System.out.println("Timeout occurred, retrying (" + retries + "/" + 3 + ")");
                 }
+
             }
 
             return -1;
@@ -87,7 +90,7 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
             System.out.println(messageToSend.toString());
             int sendResult = sendMessage(messageToSend.toString(), getUrlFromProperties(), getPortFromProperties());
             if (sendResult == -1) {
-                System.out.println("Sending did not work. Placin g link back in queue");
+                System.out.println("Sending did not work. Placing link back in queue");
                 return -1;
             }
         }
@@ -130,7 +133,10 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
             for (Element link : links) {
                 linksEncontrados.add(link.attr("abs:href"));
             }
-        } catch (IOException e) {
+
+        } catch (SSLHandshakeException ssle){
+            System.out.println("SSL apanhado\n");
+        }  catch (IOException e) {
             e.printStackTrace();
         }
     }

@@ -54,6 +54,7 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
     public String getLastLink() throws RemoteException{
         return linkQueue.removeLast();
     }
+
     public static void main(String args[]) {
         try {
             Gateway gateway = new Gateway();
