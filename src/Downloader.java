@@ -37,13 +37,32 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
         return properties;
     }
 
-    private static void sendMessage(String message, String ipAddress, int port) throws IOException {
-        //Todo: implement reliable multicast
+    private static int sendMessage(String message, String ipAddress, int port) throws IOException {
+
         try (DatagramSocket socket = new DatagramSocket()) {
             InetAddress group = InetAddress.getByName(ipAddress);
             byte[] msg = message.getBytes();
             DatagramPacket packet = new DatagramPacket(msg, msg.length, group, port);
-            socket.send(packet);
+            int retries = 0;
+
+            while (retries < 3) {
+                socket.send(packet);
+                socket.setSoTimeout(5000);
+
+                byte[] buf = new byte[1024];
+                DatagramPacket acknowledgmentPacket = new DatagramPacket(buf, buf.length);
+
+                try {
+                    socket.receive(acknowledgmentPacket);
+                    System.out.println(acknowledgmentPacket);
+                    return 0;
+                } catch (SocketTimeoutException e) {
+                    retries++;
+                    System.out.println("Timeout occurred, retrying (" + retries + "/" + 3 + ")");
+                }
+            }
+
+            return -1;
         }
     }
 
@@ -51,7 +70,7 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
         return str.getBytes().length;
     }
 
-    private static void messageBuilder(ArrayList<String> words, int type, String url) throws IOException {
+    private static int messageBuilder(ArrayList<String> words, int type, String url) throws IOException {
         int currentIndex = 0;
         int wordsLength = words.size();
 
@@ -66,8 +85,13 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
             }
 
             System.out.println(messageToSend.toString());
-            sendMessage(messageToSend.toString(), getUrlFromProperties(), getPortFromProperties());
+            int sendResult = sendMessage(messageToSend.toString(), getUrlFromProperties(), getPortFromProperties());
+            if (sendResult == -1) {
+                System.out.println("Sending did not work. Placin g link back in queue");
+                return -1;
+            }
         }
+        return 0;
     }
 
     private static String getUrlFromProperties() throws IOException {
@@ -117,14 +141,18 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
             List<String> links = new ArrayList<>();
 
             LinkScraper(url, words, links);
+            int result1 = 0, result2 = 0;
             try {
-                messageBuilder(new ArrayList<>(words), 1, url);
-                messageBuilder(new ArrayList<>(links), 0, url);
+                result1 = messageBuilder(new ArrayList<>(words), 1, url);
+                result2 = messageBuilder(new ArrayList<>(links), 0, url);
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
-
+            if (result1 == -1 || result2 == -1) {
+                links.clear();
+                links.add(url);
+            }
             gateway.putLinksInQueue(links);
 
             //wait for notify signal

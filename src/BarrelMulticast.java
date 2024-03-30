@@ -1,8 +1,5 @@
 import java.io.*;
-import java.net.DatagramPacket;
-import java.net.InetAddress;
-import java.net.MalformedURLException;
-import java.net.MulticastSocket;
+import java.net.*;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.Remote;
@@ -11,13 +8,13 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.*;
 
-class Link implements Serializable{
+class Link implements Serializable {
     public String title;
     public String url;
     public String citation;
 }
 
-public class BarrelMulticast extends MulticastSocket implements IBarrel,Serializable {
+public class BarrelMulticast extends MulticastSocket implements IBarrel, Serializable {
     String ipAddress;
     ArrayList<Integer> packetCounter = new ArrayList<>();
 
@@ -34,7 +31,8 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel,Serializ
     private static String filePath;
 
     private static int barrelID;
-    public BarrelMulticast() throws IOException{
+
+    public BarrelMulticast() throws IOException {
         super(getPortFromProperties());
         Registry registry = LocateRegistry.getRegistry("localhost", 1098);
         try {
@@ -42,7 +40,7 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel,Serializ
         } catch (NotBoundException e) {
             throw new RuntimeException(e);
         }
-        barrelID=gateway.subscribeBarrel(this);
+        barrelID = gateway.subscribeBarrel(this);
         Properties properties = new Properties();
         try (FileInputStream input = new FileInputStream(PROPERTIES_FILE_PATH)) {
             properties.load(input);
@@ -50,7 +48,7 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel,Serializ
 
         ipAddress = properties.getProperty("ipAddress");
 
-        filePath= "output"+barrelID+".txt";
+        filePath = "output" + barrelID + ".txt";
         System.out.println(filePath);
     }
 
@@ -87,8 +85,6 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel,Serializ
     }
 
 
-
-
     public void updateWordHashMap(String word, String link) {
         wordLinkMap.computeIfAbsent(word, k -> new HashSet<>()).add(link);
     }
@@ -117,6 +113,17 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel,Serializ
 
     }
 
+    private void acknowledgeReception() throws IOException {
+        String message = "shuptidu";
+        try (DatagramSocket socket = new DatagramSocket()) {
+            InetAddress group = InetAddress.getByName(ipAddress);
+            byte[] msg = message.getBytes();
+            DatagramPacket packet = new DatagramPacket(msg, msg.length, group, getPortFromProperties());
+            socket.send(packet);
+        }
+
+    }
+
     //Protocolo: packetID|downloader|downloaderID|LinkAtual|words/links|....
     //Protocolo:     0   |     1    |      2     |    3    |      4    |....
     private void processMessage(String message) throws IOException {
@@ -129,7 +136,7 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel,Serializ
         int downloaderID = Integer.parseInt(parts[2]);
         String currentLink = parts[3];
         String type = parts[4];
-        if(downloaderID+1>packetCounter.size())packetCounter.add(-1);
+        if (downloaderID + 1 > packetCounter.size()) packetCounter.add(-1);
 
         //Se o packet ID que chegou não corresponde ao atual
         //packetID-packetIDanterior <=1 ta td bem
@@ -137,9 +144,10 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel,Serializ
         if (packetID - packetCounter.get(downloaderID) > 1) {//Falhou pelo menos um pacote
             //mecanismo de recuperação
             System.out.println("someth missin");
-            System.out.println("packetID"+packetID);
-            System.out.println("current index in array"+packetCounter.get(downloaderID));
+            System.out.println("packetID" + packetID);
+            System.out.println("current index in array" + packetCounter.get(downloaderID));
         } else {
+            acknowledgeReception();
             packetCounter.set(downloaderID, packetID);
 
             if (filePath != null) {
