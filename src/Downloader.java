@@ -57,6 +57,7 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
                 try {
                     socket.receive(acknowledgmentPacket);
                     System.out.println(acknowledgmentPacket);
+                    System.out.println("Recebido");
                     return 0;
                 } catch (SocketTimeoutException e) {
                     retries++;

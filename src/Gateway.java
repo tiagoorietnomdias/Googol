@@ -3,18 +3,16 @@ import java.net.MalformedURLException;
 import java.rmi.*;
 import java.rmi.server.*;
 import java.rmi.registry.*;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 
-public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGateBarrel{
-
+public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGateBarrel {
 
     public ArrayList<IDownloader> downloaders;
     public ArrayList<IBarrel> barrels;
     public int queue[];
     ArrayDeque<String> linkQueue = new ArrayDeque<>();
+
     public Gateway() throws IOException, AlreadyBoundException {
         super();
         //String serverHostname = "192.168.245.239";
@@ -33,26 +31,55 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
 
 
     @Override
-    public int subscribeDownloader(IDownloader d) throws RemoteException{
+    public int subscribeDownloader(IDownloader d) throws RemoteException {
         downloaders.add(d);
         return downloaders.indexOf(d);
     }
+
     @Override
-    public int subscribeBarrel(IBarrel b) throws RemoteException{
+    public int subscribeBarrel(IBarrel b) throws RemoteException {
         barrels.add(b);
         return barrels.indexOf(b);
     }
 
     @Override
-    public void putLinksInQueue(List<String> links) throws RemoteException{
-        for (String link:links){
+    public void putLinksInQueue(List<String> links) throws RemoteException {
+        for (String link : links) {
             linkQueue.addFirst(link);
         }
     }
 
     @Override
-    public String getLastLink() throws RemoteException{
+    public String getLastLink() throws RemoteException {
         return linkQueue.removeLast();
+    }
+
+    @Override
+    public HashMap<String, HashSet<String>> getupdatedWordMap(int barrelIDRequesting) {
+        int i = 0;
+        HashMap<String, HashSet<String>> updatedWordMap=null;
+        for (IBarrel barrel : barrels) {
+            if (barrel.returnUpToDateState() && (i != barrelIDRequesting)) {
+                updatedWordMap = barrel.getWordLinkMap();
+                break;
+            }
+            i++;
+        }
+        return updatedWordMap;
+    }
+
+    @Override
+    public HashMap<String, HashSet<String>> getupdatedLinkMap(int barrelIDRequesting) {
+        int i = 0;
+        HashMap<String, HashSet<String>> updatedLinkMap=null;
+        for (IBarrel barrel : barrels) {
+            if (barrel.returnUpToDateState() && (i != barrelIDRequesting)) {
+                updatedLinkMap = barrel.getLinkLinkMap();
+                break;
+            }
+            i++;
+        }
+        return updatedLinkMap;
     }
 
     public static void main(String args[]) {

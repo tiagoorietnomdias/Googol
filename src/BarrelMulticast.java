@@ -1,9 +1,6 @@
 import java.io.*;
 import java.net.*;
-import java.rmi.Naming;
 import java.rmi.NotBoundException;
-import java.rmi.Remote;
-import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.*;
@@ -22,10 +19,13 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel, Seriali
     //db structures
     private HashMap<String, HashSet<String>> wordLinkMap = new HashMap<>();
     private HashMap<String, HashSet<String>> linkLinkMap = new HashMap<>();
-    Link currentLink = new Link();
 
+    private HashSet<Link> linkInfoMap= new HashSet<>();
+    private boolean isUpToDate = true;
 
     private static final String PROPERTIES_FILE_PATH = "./src/resources/System.properties";
+
+
     private static final int BUFFER_SIZE = 1024;
     private IGateBarrel gateway;
     private static String filePath;
@@ -50,6 +50,14 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel, Seriali
 
         filePath = "output" + barrelID + ".txt";
         System.out.println(filePath);
+    }
+
+    public HashMap<String, HashSet<String>> getWordLinkMap() {
+        return wordLinkMap;
+    }
+
+    public HashMap<String, HashSet<String>> getLinkLinkMap() {
+        return linkLinkMap;
     }
 
     public void printWordLinkMap() {
@@ -113,12 +121,16 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel, Seriali
 
     }
 
+    public boolean returnUpToDateState() {
+        return isUpToDate;
+    }
+
     private void acknowledgeReception() throws IOException {
         String message = "shuptidu";
-            InetAddress group = InetAddress.getByName(ipAddress);
-            byte[] msg = message.getBytes();
-            DatagramPacket packet = new DatagramPacket(msg, msg.length, group, getPortFromProperties());
-            this.send(packet);
+        InetAddress group = InetAddress.getByName(ipAddress);
+        byte[] msg = message.getBytes();
+        DatagramPacket packet = new DatagramPacket(msg, msg.length, group, getPortFromProperties());
+        this.send(packet);
     }
 
     //Protocolo: packetID|downloader|downloaderID|LinkAtual|words/links|....
@@ -135,13 +147,18 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel, Seriali
         String type = parts[4];
         if (downloaderID + 1 > packetCounter.size()) packetCounter.add(-1);
 
-        //Se o packet ID que chegou não corresponde ao atual
-        //packetID-packetIDanterior <=1 ta td bem
-        //portanto se packetID-packetIDanterior >1 n ta bem
+
         if (packetID - packetCounter.get(downloaderID) > 1) {//Falhou pelo menos um pacote
             //mecanismo de recuperação
+            isUpToDate = false;
+            ///req to gateway
+            do {
+                wordLinkMap = gateway.getupdatedWordMap(barrelID);
+                linkLinkMap = gateway.getupdatedLinkMap(barrelID);
 
-            System.out.println("someth missin");
+            }while(gateway.getupdatedWordMap(barrelID) != null &&gateway.getupdatedLinkMap(barrelID) != null);
+            packetCounter.set(downloaderID, packetID);
+            //update
             System.out.println("packetID" + packetID);
             System.out.println("current index in array" + packetCounter.get(downloaderID));
         } else {
