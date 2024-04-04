@@ -19,6 +19,8 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
     private static int packetID = 0;
     private IGateDownloader gateway;
 
+    private static String title;
+
     public Downloader() throws RemoteException {
         super();
         try {
@@ -56,7 +58,7 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
 
                 try {
                     socket.receive(acknowledgmentPacket);
-                    System.out.println(acknowledgmentPacket);
+                    //System.out.println(acknowledgmentPacket);
                     System.out.println("Recebido");
                     return 0;
                 } catch (SocketTimeoutException e) {
@@ -80,7 +82,7 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
 
         while (currentIndex < wordsLength) {
             StringBuilder messageToSend = new StringBuilder();
-            String prefix = (type == 1) ? packetID + "|downloader|" + downloaderID + "|" + url + "|words|" : packetID + "|downloader|" + downloaderID + "|" + url + "|links|";
+            String prefix = (type == 1) ? packetID + "|downloader|" + downloaderID + "|" + url + "|words|"+ title+"|"  : packetID + "|downloader|" + downloaderID + "|" + url + "|links|";
             packetID += 1;
             messageToSend.append(prefix);
             while (currentIndex < wordsLength && getStringSizeInBytes(prefix + words.get(currentIndex)) < MAX_MESSAGE_SIZE) {
@@ -123,6 +125,7 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
         Set<String> stopwordsSet = loadStopwords();
         try {
             Document doc = Jsoup.connect(url).get();
+            title=doc.title();
             Elements links = doc.select("a[href]");
             StringTokenizer tokens = new StringTokenizer(doc.text());
             while (tokens.hasMoreElements()) {
@@ -160,15 +163,15 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
                 links.clear();
                 links.add(url);
             }
-            gateway.putLinksInQueue(links);
 
             //wait for notify signal
+            gateway.putLinksInQueue(links);
+
             try {
                 url = gateway.getLastLink();
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
-            //repeat
         }
     }
 

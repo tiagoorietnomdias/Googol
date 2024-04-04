@@ -9,22 +9,25 @@ class Link implements Serializable {
     public String title;
     public String url;
     public String citation;
+
+    public String getUrl() {
+        return url;
+    }
 }
 
-public class BarrelMulticast extends MulticastSocket implements IBarrel, Serializable {
+public class Barrel extends MulticastSocket implements IBarrel, Serializable {
     String ipAddress;
     ArrayList<Integer> packetCounter = new ArrayList<>();
 
 
     //db structures
-    private HashMap<String, HashSet<String>> wordLinkMap = new HashMap<>();
+    public HashMap<String, HashSet<String>> wordLinkMap = new HashMap<>();
     private HashMap<String, HashSet<String>> linkLinkMap = new HashMap<>();
 
-    private HashSet<Link> linkInfoMap= new HashSet<>();
+    private HashSet<Link> linkInfoMap = new HashSet<>();
     private boolean isUpToDate = true;
 
     private static final String PROPERTIES_FILE_PATH = "./src/resources/System.properties";
-
 
     private static final int BUFFER_SIZE = 1024;
     private IGateBarrel gateway;
@@ -32,7 +35,7 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel, Seriali
 
     private static int barrelID;
 
-    public BarrelMulticast() throws IOException {
+    public Barrel() throws IOException {
         super(getPortFromProperties());
         Registry registry = LocateRegistry.getRegistry("localhost", 1098);
         try {
@@ -45,9 +48,7 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel, Seriali
         try (FileInputStream input = new FileInputStream(PROPERTIES_FILE_PATH)) {
             properties.load(input);
         }
-
         ipAddress = properties.getProperty("ipAddress");
-
         filePath = "output" + barrelID + ".txt";
         System.out.println(filePath);
     }
@@ -58,6 +59,10 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel, Seriali
 
     public HashMap<String, HashSet<String>> getLinkLinkMap() {
         return linkLinkMap;
+    }
+
+    public HashSet<Link> getLinkInfoMap() {
+        return linkInfoMap;
     }
 
     public void printWordLinkMap() {
@@ -116,6 +121,7 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel, Seriali
             String received = new String(packet.getData(), 0, packet.getLength());
             //System.out.println("Received: " + received);
             processMessage(received);
+            gateway.renewBarrelState(barrelID, this);
 
         }
 
@@ -156,7 +162,7 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel, Seriali
                 wordLinkMap = gateway.getupdatedWordMap(barrelID);
                 linkLinkMap = gateway.getupdatedLinkMap(barrelID);
 
-            }while(gateway.getupdatedWordMap(barrelID) != null &&gateway.getupdatedLinkMap(barrelID) != null);
+            } while (gateway.getupdatedWordMap(barrelID) != null && gateway.getupdatedLinkMap(barrelID) != null);
             packetCounter.set(downloaderID, packetID);
             //update
             System.out.println("packetID" + packetID);
@@ -164,7 +170,6 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel, Seriali
         } else {
             acknowledgeReception();
             packetCounter.set(downloaderID, packetID);
-
             if (filePath != null) {
                 try {
                     FileWriter fileWriter = new FileWriter(filePath, true); // 'true' indicates append mode
@@ -174,7 +179,7 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel, Seriali
                     bufferedWriter.newLine(); // Writes a newline character
                     bufferedWriter.flush(); // Flushes the buffer
                     bufferedWriter.close(); // Closes the writer
-                    System.out.println("Data appended to file successfully.");
+                    System.out.println(wordLinkMap);
                 } catch (IOException e) {
                     System.err.println("Error writing to file: " + e.getMessage());
                     e.printStackTrace();
@@ -192,15 +197,67 @@ public class BarrelMulticast extends MulticastSocket implements IBarrel, Seriali
             }
 
         } else if (type.equals("words")) {
-            for (int i = 5; i < parts.length; i++) {
+            Link linkToAdd = new Link();
+            linkToAdd.title = parts[6];
+            linkToAdd.url = parts[3];
+            linkInfoMap.add(linkToAdd);
+            for (int i = 6; i < parts.length; i++) {
                 updateWordHashMap(parts[i], currentLink);//adicionar a palavra->link atual
             }
 
         }
     }
 
+    @Override
+    public ArrayList<Link> searchWord(String wordstoSearch) {
+
+        String[] words = wordstoSearch.split(" ");
+        ArrayList<Link> finalList = new ArrayList<>();
+        HashSet<String> associatedLinks;
+        if (wordLinkMap.containsKey(words[0])) {
+            associatedLinks = wordLinkMap.get(words[0]);
+            for (String l : associatedLinks) {
+                boolean linkExists = true;
+                for (int j = 1; j < words.length; j++) {
+                    if (wordLinkMap.get(words[j]).contains(l)) {
+                        linkExists = false;
+                        break;
+                    }
+                }
+                if (linkExists) {
+                    for (Link link : linkInfoMap) {
+                        if (link.getUrl().equals(l)) {
+                            finalList.add(link);
+                            break;
+                        }
+
+                    }
+                }
+
+            }
+            System.out.println("Values associated with the word '" + wordstoSearch + "': " + finalList);
+        }
+        return finalList;
+    }
+
+
+    public ArrayList<Link> searchLink(String linktoSearch) {
+        ArrayList<Link> finalList = new ArrayList<>();
+        HashSet<String> associatedLinks;
+        if (linkLinkMap.containsKey(linktoSearch)) {
+            associatedLinks = linkLinkMap.get(linktoSearch);
+            for (String link : associatedLinks) {
+                Link erm = new Link();
+                erm.url = link;
+                finalList.add(erm);
+            }
+
+        }
+        return finalList;
+    }
+
     public static void main(String[] args) throws IOException {
-        BarrelMulticast barrel = new BarrelMulticast();
+        Barrel barrel = new Barrel();
         barrel.receiveMessage();
     }
 }
