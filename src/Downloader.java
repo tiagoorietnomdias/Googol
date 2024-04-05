@@ -82,7 +82,7 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
 
         while (currentIndex < wordsLength) {
             StringBuilder messageToSend = new StringBuilder();
-            String prefix = (type == 1) ? packetID + "|downloader|" + downloaderID + "|" + url + "|words|"+ title+"|"  : packetID + "|downloader|" + downloaderID + "|" + url + "|links|";
+            String prefix = (type == 1) ? packetID + "|downloader|" + downloaderID + "|" + url + "|words|" + title + "|" : packetID + "|downloader|" + downloaderID + "|" + url + "|links|";
             packetID += 1;
             messageToSend.append(prefix);
             while (currentIndex < wordsLength && getStringSizeInBytes(prefix + words.get(currentIndex)) < MAX_MESSAGE_SIZE) {
@@ -125,7 +125,7 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
         Set<String> stopwordsSet = loadStopwords();
         try {
             Document doc = Jsoup.connect(url).get();
-            title=doc.title();
+            title = doc.title();
             Elements links = doc.select("a[href]");
             StringTokenizer tokens = new StringTokenizer(doc.text());
             while (tokens.hasMoreElements()) {
@@ -138,18 +138,26 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
                 linksEncontrados.add(link.attr("abs:href"));
             }
 
-        } catch (SSLHandshakeException ssle){
+        } catch (SSLHandshakeException ssle) {
             System.out.println("SSL apanhado\n");
-        }  catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void run(String url) throws RemoteException {
+    private void run() throws RemoteException {
         while (true) {
             List<String> words = new ArrayList<>();
             List<String> links = new ArrayList<>();
-
+            String url=null;
+            do {
+                try{
+                url = gateway.getLastLink();}
+                catch (NoSuchElementException e){
+                    System.out.println("found nothing imma keep lookin");
+                }
+            } while (url == null);
+            System.out.println(url);
             LinkScraper(url, words, links);
             int result1 = 0, result2 = 0;
             try {
@@ -181,8 +189,8 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
             return;
         }
 
-        String url = args[0];
+
         Downloader downloader = new Downloader();
-        downloader.run(url);
+        downloader.run();
     }
 }

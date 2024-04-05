@@ -86,6 +86,12 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
     }
 
     @Override
+    public void insertInQueue(String linkToInsert) throws RemoteException{
+        if(linkToInsert.startsWith("https://"))linkQueue.addFirst(linkToInsert);
+        else System.out.println("Please insert a valid URL");
+    }
+
+    @Override
     public void putLinksInQueue(List<String> links) throws RemoteException {
         for (String link : links) {
             linkQueue.addFirst(link);
