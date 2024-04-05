@@ -49,7 +49,6 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
         barrels.set(barrelID, barrel);
     }
 
-
     @Override
     public int subscribeClient(ICliente c) throws RemoteException {
         clients.add(c);
@@ -65,9 +64,6 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
 
     @Override
     public List<String> getTop10Searches() throws RemoteException{
-        for(int i=0;i<barrels.size();i++){
-            barrels.set(i,barrels.get(i).renewBarrel());
-        }
         HashMap<String,Integer> top10= new HashMap<>();
         for (IBarrel barrel:barrels){
             top10=barrel.getNumberOfSearches();
