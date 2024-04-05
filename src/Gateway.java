@@ -4,16 +4,22 @@ import java.rmi.*;
 import java.rmi.server.*;
 import java.rmi.registry.*;
 import java.util.*;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGateBarrel, IGateClient {
 
     public ArrayList<IDownloader> downloaders;
+    //private final Lock queueLock;
     public ArrayList<IBarrel> barrels;
 
     public ArrayList<ICliente> clients;
     public int queue[];
-    ArrayDeque<String> linkQueue = new ArrayDeque<>();
+    BlockingDeque<String> linkQueue = new LinkedBlockingDeque<>();
 
     public Gateway() throws IOException, AlreadyBoundException {
         super();
@@ -44,8 +50,9 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
         barrels.add(b);
         return barrels.indexOf(b);
     }
+
     @Override
-    public void renewBarrelState(int barrelID, IBarrel barrel)throws RemoteException{
+    public void renewBarrelState(int barrelID, IBarrel barrel) throws RemoteException {
         barrels.set(barrelID, barrel);
     }
 
@@ -56,17 +63,17 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
     }
 
     @Override
-    public ArrayList<Integer> getActiveBarrels() throws RemoteException{
-        ArrayList<Integer> activeBarrels= new ArrayList<>();
-        for (IBarrel barrel: barrels)activeBarrels.add(barrels.indexOf(barrel));
+    public ArrayList<Integer> getActiveBarrels() throws RemoteException {
+        ArrayList<Integer> activeBarrels = new ArrayList<>();
+        for (IBarrel barrel : barrels) activeBarrels.add(barrels.indexOf(barrel));
         return activeBarrels;
     }
 
     @Override
-    public List<String> getTop10Searches() throws RemoteException{
-        HashMap<String,Integer> top10= new HashMap<>();
-        for (IBarrel barrel:barrels){
-            top10=barrel.getNumberOfSearches();
+    public List<String> getTop10Searches() throws RemoteException {
+        HashMap<String, Integer> top10 = new HashMap<>();
+        for (IBarrel barrel : barrels) {
+            top10 = barrel.getNumberOfSearches();
             break;
         }
         System.out.println(top10.size());
@@ -75,21 +82,26 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
         entryList.sort(Map.Entry.comparingByValue(Comparator.reverseOrder()));
 
         List<String> sortedKeys = new ArrayList<>();
-        int contador=0;
+        int contador = 0;
         for (Map.Entry<String, Integer> entry : entryList) {
-            contador+=1;
-            sortedKeys.add("Top "+contador+": "+entry.getKey()+"\n");
+            contador += 1;
+            sortedKeys.add("Top " + contador + ": " + entry.getKey() + "\n");
         }
 
         System.out.println(sortedKeys);
-    return sortedKeys;
+        return sortedKeys;
     }
 
     @Override
-    public void insertInQueue(String linkToInsert) throws RemoteException{
-        if(linkToInsert.startsWith("https://"))linkQueue.addFirst(linkToInsert);
-        else System.out.println("Please insert a valid URL");
+    public void insertInQueue(String linkToInsert) throws RemoteException {
+        if (linkToInsert.startsWith("https://") || linkToInsert.startsWith("http://")) {
+            linkQueue.addFirst(linkToInsert);
+            System.out.println(linkQueue.getFirst());
+        } else {
+            System.out.println("Please insert a valid URL");
+        }
     }
+
 
     @Override
     public void putLinksInQueue(List<String> links) throws RemoteException {
@@ -99,14 +111,16 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
     }
 
     @Override
-    public String getLastLink() throws RemoteException {
-        return linkQueue.removeLast();
+    public String getLastLink() throws RemoteException, InterruptedException {
+        String link = linkQueue.takeLast();
+        return link;
+
     }
 
     @Override
     public HashMap<String, HashSet<String>> getupdatedWordMap(int barrelIDRequesting) throws RemoteException {
         int i = 0;
-        HashMap<String, HashSet<String>> updatedWordMap=null;
+        HashMap<String, HashSet<String>> updatedWordMap = null;
         for (IBarrel barrel : barrels) {
             if (barrel.returnUpToDateState() && (i != barrelIDRequesting)) {
                 updatedWordMap = barrel.getWordLinkMap();
@@ -118,51 +132,51 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
     }
 
     @Override
-    public HashMap<String, HashSet<String>> getupdatedLinkMap(int barrelIDRequesting) throws RemoteException{
+    public HashMap<String, HashSet<String>> getupdatedLinkMap(int barrelIDRequesting) throws RemoteException {
         int i = 0;
-        HashMap<String, HashSet<String>> updatedLinkMap=null;
+        HashMap<String, HashSet<String>> updatedLinkMap = null;
         for (IBarrel barrel : barrels) {
             if (barrel.returnUpToDateState() && (i != barrelIDRequesting)) {
                 updatedLinkMap = barrel.getLinkLinkMap();
-            break;
+                break;
 
             }
             i++;
         }
         return updatedLinkMap;
     }
+
     @Override
-    public ArrayList<String> pesquisa(String wordToSearch) throws RemoteException{
-            ArrayList<Link> results= new ArrayList<>();
-            ArrayList<String> coolResults = new ArrayList<>();
-            if (wordToSearch.startsWith("http://")||wordToSearch.startsWith("https://")) {
+    public ArrayList<String> pesquisa(String wordToSearch) throws RemoteException {
+        ArrayList<Link> results = new ArrayList<>();
+        ArrayList<String> coolResults = new ArrayList<>();
+        if (wordToSearch.startsWith("http://") || wordToSearch.startsWith("https://")) {
 
-                //link
-                results = barrels.get(0).searchLink(wordToSearch);
+            //link
+            results = barrels.get(0).searchLink(wordToSearch);
 
-                for (Link link : results){
+            for (Link link : results) {
 
-                    String string ="URL: " + link.getUrl() + "\n";
-                    coolResults.add(string);
-                }
-               // System.out.println(coolResults.size());
-
-
-            } else {
-                results = barrels.get(0).searchWord(wordToSearch);
-                results.sort(Comparator.comparingInt(Link::getRank).reversed());
-                for (Link link : results){
-
-                    String string ="Title: " + link.title + "\n" + "URL: " + link.getUrl() + "\n" + "Citation: " + link.citation + "\n";
-                    coolResults.add(string);
-                }
-
-             //   System.out.println(results.size());
-
-
-
+                String string = "URL: " + link.getUrl() + "\n";
+                coolResults.add(string);
             }
-            //Construir string a retornar a client
+            // System.out.println(coolResults.size());
+
+
+        } else {
+            results = barrels.get(0).searchWord(wordToSearch);
+            results.sort(Comparator.comparingInt(Link::getRank).reversed());
+            for (Link link : results) {
+
+                String string = "Title: " + link.title + "\n" + "URL: " + link.getUrl() + "\n" + "Citation: " + link.citation + "\n";
+                coolResults.add(string);
+            }
+
+            //   System.out.println(results.size());
+
+
+        }
+        //Construir string a retornar a client
         return coolResults;
     }
 

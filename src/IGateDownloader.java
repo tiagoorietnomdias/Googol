@@ -8,5 +8,5 @@ public interface IGateDownloader extends Remote{
 
     void putLinksInQueue(List<String> links) throws RemoteException;
 
-    String getLastLink() throws RemoteException;
+    String getLastLink() throws RemoteException, InterruptedException;
 }

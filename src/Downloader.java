@@ -152,8 +152,9 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
             String url=null;
             do {
                 try{
-                url = gateway.getLastLink();}
-                catch (NoSuchElementException e){
+                    url = gateway.getLastLink();
+                }
+                catch (NoSuchElementException | InterruptedException e){
                     System.out.println("found nothing imma keep lookin");
                 }
             } while (url == null);
