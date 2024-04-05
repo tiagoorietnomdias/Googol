@@ -1,3 +1,7 @@
+/**
+ * The `Barrel` class in Java implements a system for managing and processing links and words,
+ * including methods for searching and updating link and word maps.
+ */
 import java.io.*;
 import java.net.*;
 import java.rmi.ConnectException;
@@ -8,6 +12,9 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.*;
 
+/**
+ * The `Link` class in Java represents a link with properties such as title, URL, citation, and rank.
+ */
 class Link implements Serializable {
     public String title;
     public String url;
@@ -24,6 +31,11 @@ class Link implements Serializable {
     }
 }
 
+/**
+ * The `Barrel` class in Java extends `MulticastSocket`, implements `IBarrel` and `Serializable`, and
+ * contains various data structures and methods for processing and storing information related to links
+ * and words.
+ */
 public class Barrel extends MulticastSocket implements IBarrel, Serializable {
     String ipAddress;
     ArrayList<Integer> packetCounter = new ArrayList<>();
@@ -80,18 +92,39 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         System.out.println(filePath);
     }
 
+    /**
+     * The function `getWordLinkMap` returns a HashMap where each key is a String and each value is a
+     * HashSet of Strings.
+     *
+     * @return A HashMap<String, HashSet<String>> named wordLinkMap is being returned.
+     */
     public HashMap<String, HashSet<String>> getWordLinkMap() {
         return wordLinkMap;
     }
 
+    /**
+     * The function `getLinkLinkMap` returns a HashMap with keys of type String and values of type
+     * HashSet<String>.
+     *
+     * @return A HashMap with keys of type String and values of type HashSet<String> is being returned.
+     */
     public HashMap<String, HashSet<String>> getLinkLinkMap() {
         return linkLinkMap;
     }
 
+    /**
+     * The function returns a HashSet containing Link objects representing link information.
+     *
+     * @return A HashSet containing Link objects is being returned.
+     */
     public HashSet<Link> getLinkInfoMap() {
         return linkInfoMap;
     }
 
+    /**
+     * The function `printWordLinkMap` prints the contents of a map where each word is associated with
+     * a set of links.
+     */
     public void printWordLinkMap() {
         System.out.println("Contents of wordLinkMap:");
         for (Map.Entry<String, HashSet<String>> entry : wordLinkMap.entrySet()) {
@@ -104,6 +137,10 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
     }
 
     // Method to print the contents of linkLinkMap
+    /**
+     * The function `printLinkLinkMap` prints the contents of a map where each key is a link and the
+     * corresponding value is a set of linked links.
+     */
     public void printLinkLinkMap() {
         System.out.println("Contents of linkLinkMap:");
         for (Map.Entry<String, HashSet<String>> entry : linkLinkMap.entrySet()) {
@@ -116,6 +153,15 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
     }
 
 
+    /**
+     * The function `getPortFromProperties` reads a properties file to retrieve and return the port
+     * number specified in the file, handling exceptions by printing an error message and exiting if
+     * the file cannot be loaded.
+     *
+     * @return The method `getPortFromProperties` is returning an integer value, which is the port
+     * number read from the properties file specified by the key "port". If there is an IOException
+     * while reading the properties file, the method will return -1.
+     */
     private static int getPortFromProperties() throws IOException {
         try (FileInputStream input = new FileInputStream(PROPERTIES_FILE_PATH)) {
             Properties properties = new Properties();
@@ -128,20 +174,49 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         }
 
     }
+    /**
+     * The `renewBarrel` function in Java returns an `IBarrel` object and may throw a
+     * `RemoteException`.
+     *
+     * @return The `renewBarrel` method is returning an object that implements the `IBarrel` interface.
+     * In this case, it is returning the current object (`this`).
+     */
     @Override
     public IBarrel renewBarrel()throws RemoteException{
 
         return this;
     }
 
+    /**
+     * The `updateWordHashMap` function adds a link to a HashSet associated with a word in a HashMap if
+     * the word is not already present in the HashMap.
+     *
+     * @param word The `word` parameter is a String representing a word that will be used as a key in a
+     * HashMap.
+     * @param link The `link` parameter in the `updateWordHashMap` method is a String that represents a
+     * link associated with a particular word.
+     */
     public void updateWordHashMap(String word, String link) {
         wordLinkMap.computeIfAbsent(word, k -> new HashSet<>()).add(link);
     }
 
+    /**
+     * The `updateLinkHashMap` function adds a link to a HashSet associated with a given key in a
+     * HashMap.
+     *
+     * @param currentLink The `currentLink` parameter is a String that represents the key in the
+     * `linkLinkMap` HashMap where we want to add a new link.
+     * @param linkToAdd The `linkToAdd` parameter is a String representing the link that you want to
+     * add to the HashSet associated with the `currentLink` key in the `linkLinkMap`.
+     */
     public void updateLinkHashMap(String currentLink, String linkToAdd) {
         linkLinkMap.computeIfAbsent(currentLink, k -> new HashSet<>()).add(linkToAdd);
     }
 
+    /**
+     * The `receiveMessage` function in Java listens for incoming messages over a network using
+     * DatagramSocket and processes the received data.
+     */
     public void receiveMessage() throws IOException {
 
 
@@ -163,10 +238,20 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
 
     }
 
+    /**
+     * The function `returnUpToDateState` returns the value of the `isUpToDate` boolean variable.
+     *
+     * @return The method `returnUpToDateState` is returning the value of the boolean variable
+     * `isUpToDate`.
+     */
     public boolean returnUpToDateState() {
         return isUpToDate;
     }
 
+    /**
+     * The `acknowledgeReception` method sends a UDP packet containing the message "shuptidu" to a
+     * specified IP address and port.
+     */
     private void acknowledgeReception() throws IOException {
         String message = "shuptidu";
         InetAddress group = InetAddress.getByName(ipAddress);
@@ -177,6 +262,16 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
 
     //Protocolo: packetID|downloader|downloaderID|LinkAtual|words/links|....
     //Protocolo:     0   |     1    |      2     |    3    |      4    |....
+    /**
+     * The `processMessage` function in Java processes a message, updates packet and file information,
+     * and handles different types of data based on the message content.
+     *
+     * @param message The `processMessage` method takes a `String` message as input and processes it
+     * according to the specified logic. The message is split into parts using the pipe character as
+     * the delimiter.
+     *
+     *
+     */
     private void processMessage(String message) throws IOException {
         String[] parts = message.split("\\|");
 
@@ -244,12 +339,29 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         }
     }
 
+    /**
+     * This Java function returns a HashMap containing the number of searches.
+     *
+     * @return The method `getNumberOfSearches` is returning a `HashMap` with keys of type `String` and
+     * values of type `Integer`.
+     */
+    // The above Java code is implementing two methods in a remote interface.
     @Override
     public HashMap<String, Integer> getNumberOfSearches() throws RemoteException {
         //gateway.renewBarrelState(barrelID, this);
         return numberOfSearches;
     }
 
+    /**
+     * The `searchWord` function in Java processes a search query, updates search counts, retrieves
+     * associated links, calculates ranks, and renews state using a gateway.
+     *
+     * @param wordstoSearch The `searchWord` method you provided seems to be a part of a remote service
+     * that searches for links associated with a given set of words. The method splits the input
+     * `wordstoSearch` into individual words, keeps track of the number of searches for each word, and
+     * then searches for links associated
+     * @return The method `searchWord` is returning an ArrayList of Link objects.
+     */
     @Override
     public ArrayList<Link> searchWord(String wordstoSearch) throws RemoteException {
 
@@ -300,6 +412,19 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
     }
 
 
+    /**
+     * The `searchLink` function searches for a specified link in a map and returns a list of
+     * associated links.
+     *
+     * @param linktoSearch The `searchLink` method you provided takes a `String` parameter named
+     * `linktoSearch`, which represents the link that you want to search for in the `linkLinkMap`. The
+     * method then retrieves the associated links for the given input link and returns a list of `Link`
+     * objects containing those
+     * @return The `searchLink` method returns an ArrayList of Link objects that are associated with
+     * the input `linktoSearch`. If the input `linktoSearch` is found in the `linkLinkMap`, the method
+     * retrieves the associated links from the map, creates Link objects for each associated link, adds
+     * them to the finalList, and returns the finalList of Link objects. If the input `linkto
+     */
     public ArrayList<Link> searchLink(String linktoSearch) {
         ArrayList<Link> finalList = new ArrayList<>();
         HashSet<String> associatedLinks;

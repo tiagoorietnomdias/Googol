@@ -1,3 +1,7 @@
+/**
+ * The `Cliente` class in Java represents a client that interacts with a remote server using RMI for
+ * tasks such as searching, managing active barrels, and inserting URLs into a queue.
+ */
 import java.net.MalformedURLException;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
@@ -52,6 +56,10 @@ public class Cliente extends UnicastRemoteObject implements ICliente {
 
 
 
+    /**
+     * The main function in Java takes user input to perform various actions such as searching, accessing
+     * an admin page, inserting URLs into a queue, and displaying results.
+     */
     public static void main(String[] args) {
         try {
             Cliente c = new Cliente();
@@ -60,6 +68,9 @@ public class Cliente extends UnicastRemoteObject implements ICliente {
 
             System.out.println("Enter text. Type 'exit' to quit.");
 
+            // The code snippet provided is a part of a Java program that handles user input and
+            // provides options for the client to interact with the server. Here's a breakdown of what
+            // it does:
             while (true) {
                 System.out.println("1-Pesquisa\n2-Admin Page\n3-Exit\n4-Inserir URL na queue");
                 String input = scanner.nextLine();
@@ -106,7 +117,7 @@ public class Cliente extends UnicastRemoteObject implements ICliente {
                     }
                     List<String> erm=gateway.getTop10Searches();
                     for (String search:erm) System.out.println(search);
-                    /*Esta informação será atualizada apenas quando houver alterações. Pretende-se saber o estado do sistema, designadamente as 10 pesquisas mais comuns, a lista de Barrels ativos, e o
+                    /*Esta informação será atualizada apenas quando houver alterações. Pretende-se saber o estado do sistema, designadamente as 10 pesquisas mais comuns, a lista de Barrels ativos, e o
                      */
                     //10 pesquisas mais comuns
 
@@ -129,6 +140,20 @@ public class Cliente extends UnicastRemoteObject implements ICliente {
         }
     }
 
+    /**
+     * The function `showNextTen` prints the next ten elements from an ArrayList starting from a given
+     * index and returns the index of the last element printed.
+     *
+     * @param currentIndex The `currentIndex` parameter in the `showNextTen` method represents the
+     * starting index from which you want to display the next ten elements in the `results` ArrayList.
+     * The method will iterate over the elements starting from this index and display up to the next
+     * ten elements or until the end of the list
+     * @param results The `results` parameter is an `ArrayList` of `String` objects that contains the
+     * data to be displayed. The `showNextTen` method takes the `currentIndex` as a starting point and
+     * prints the next ten elements from the `results` list, if available. If there are less than
+     * @return The method `showNextTen` is returning the index `i` which represents the next index
+     * after the last one that was processed in the loop.
+     */
     private static int showNextTen(int currentIndex, ArrayList<String> results) {
         int i;
         for (i = currentIndex; i < currentIndex + 10; i++) {
@@ -138,6 +163,18 @@ public class Cliente extends UnicastRemoteObject implements ICliente {
         return i;
     }
 
+    /**
+     * The function `showPreviousTen` prints the previous ten elements from a given index in an
+     * ArrayList.
+     *
+     * @param currentIndex The `currentIndex` parameter is the current index in the list from which you
+     * want to display the previous ten elements. The method `showPreviousTen` aims to display the ten
+     * elements preceding the current index in the `results` ArrayList.
+     * @param results The `showPreviousTen` method you provided takes in two parameters: `currentIndex`
+     * and `results`. The `currentIndex` parameter is used to determine the starting point for
+     * displaying the previous ten elements from the `results` ArrayList.
+     * @return The method `showPreviousTen` is returning the `currentIndex` value, which is an integer.
+     */
     private static int showPreviousTen(int currentIndex, ArrayList<String> results) {
         int i;
         for (i = currentIndex - 20; i < currentIndex; i++) {
