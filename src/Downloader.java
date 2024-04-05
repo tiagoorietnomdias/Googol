@@ -6,9 +6,8 @@ import org.jsoup.select.Elements;
 import javax.net.ssl.SSLHandshakeException;
 import java.io.*;
 import java.net.*;
-import java.rmi.Naming;
-import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
+import java.rmi.*;
+import java.rmi.ConnectException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
@@ -23,10 +22,23 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
 
     public Downloader() throws RemoteException {
         super();
-        try {
-            gateway = (IGateDownloader) Naming.lookup("GatewayDownloader");
-        } catch (NotBoundException | MalformedURLException e) {
-            throw new RuntimeException(e);
+        while(true) {
+            try {
+                gateway = (IGateDownloader) Naming.lookup("GatewayDownloader");
+            } catch (NotBoundException | MalformedURLException e) {
+                throw new RuntimeException(e);
+            } catch (RemoteException e) {
+                try{
+                    System.out.println("Connection refused, waiting 3 second and retrying...");
+                    Thread.sleep(3000);
+                    System.out.println("Resuming Connection...");
+                    continue;
+
+                } catch (InterruptedException ie){
+                    System.out.println("Downloader stopped while waiting");
+                }
+            }
+            break;
         }
         downloaderID = gateway.subscribeDownloader(this);
         System.out.println("Client sent subscription to server");
@@ -36,6 +48,8 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
         Properties properties = new Properties();
         try (FileInputStream input = new FileInputStream(filename)) {
             properties.load(input);
+        } catch(IOException e){
+            System.out.println("Couldn't load \"" + filename + "\". Make sure the file is available");
         }
         return properties;
     }
@@ -51,7 +65,7 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
 
             while (retries < 3) {
                 socket.send(packet);
-                socket.setSoTimeout(1);
+                socket.setSoTimeout(100);
 
                 byte[] buf = new byte[1024];
                 DatagramPacket acknowledgmentPacket = new DatagramPacket(buf, buf.length);
@@ -124,7 +138,7 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
     public static void LinkScraper(String url, List<String> palavrasEncontradas, List<String> linksEncontrados) {
         Set<String> stopwordsSet = loadStopwords();
         try {
-            Document doc = Jsoup.connect(url).get();
+            Document doc = Jsoup.connect(url).userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0").get();
             title = doc.title();
             Elements links = doc.select("a[href]");
             StringTokenizer tokens = new StringTokenizer(doc.text());
@@ -138,10 +152,13 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
                 linksEncontrados.add(link.attr("abs:href"));
             }
 
-        } catch (SSLHandshakeException ssle) {
+        } catch(RemoteException e){
+            System.out.println("Connection refused");
+        }catch (SSLHandshakeException ssle) {
             System.out.println("SSL apanhado\n");
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Malformed URL");
+
         }
     }
 
@@ -160,6 +177,7 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
             } while (url == null);
             System.out.println(url);
             LinkScraper(url, words, links);
+            System.out.println(url);
             int result1 = 0, result2 = 0;
             try {
                 result1 = messageBuilder(new ArrayList<>(words), 1, url);
@@ -178,9 +196,10 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
 
             try {
                 url = gateway.getLastLink();
-            } catch (RemoteException e) {
+            } catch (RemoteException | InterruptedException e) {
                 e.printStackTrace();
             }
+
         }
     }
 

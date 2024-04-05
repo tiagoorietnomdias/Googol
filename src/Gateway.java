@@ -32,10 +32,12 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
         clients = new ArrayList<>();
         Registry downloaderRegistry = LocateRegistry.createRegistry(1099);
         Registry barrelRegistry = LocateRegistry.createRegistry(1098);
+        Registry clientRegistry = LocateRegistry.createRegistry(1100); //registry para o cliente
 
 
         barrelRegistry.rebind("GatewayBarrel", this);
         downloaderRegistry.rebind("GatewayDownloader", this);
+        clientRegistry.rebind("GatewayClient", this);
     }
 
 

@@ -1,6 +1,8 @@
 import java.io.*;
 import java.net.*;
+import java.rmi.ConnectException;
 import java.rmi.NotBoundException;
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -44,18 +46,34 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
 
     private static int barrelID;
 
-    public Barrel() throws IOException {
+    public Barrel() throws IOException, RemoteException {
         super(getPortFromProperties());
-        Registry registry = LocateRegistry.getRegistry("localhost", 1098);
-        try {
-            gateway = (IGateBarrel) registry.lookup("GatewayBarrel");
-        } catch (NotBoundException e) {
-            throw new RuntimeException(e);
+        while(true) {
+            try {
+                Registry registry = LocateRegistry.getRegistry("localhost", 1098);
+                gateway = (IGateBarrel) registry.lookup("GatewayBarrel");
+
+            } catch (NotBoundException e) {
+                throw new RuntimeException(e);
+            } catch (RemoteException e) {
+                try {
+                    System.out.println("Barrel" + barrelID +" couldn't connect, waiting 3 second and retrying...");
+                    Thread.sleep(3000);
+                    System.out.println("Resuming Connection...");
+                    continue;
+
+                } catch (InterruptedException ie) {
+                    System.out.println("Barrel" + barrelID + " stopped while waiting");
+                }
+            }
+            break;
         }
         barrelID = gateway.subscribeBarrel(this);
         Properties properties = new Properties();
         try (FileInputStream input = new FileInputStream(PROPERTIES_FILE_PATH)) {
             properties.load(input);
+        } catch(IOException e){
+            System.out.println("Couldn't open " +PROPERTIES_FILE_PATH);
         }
         ipAddress = properties.getProperty("ipAddress");
         filePath = "output" + barrelID + ".txt";
@@ -103,7 +121,12 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
             Properties properties = new Properties();
             properties.load(input);
             return Integer.parseInt(properties.getProperty("port"));
+        } catch(IOException e){
+            System.out.println("Couldn't load \"" + PROPERTIES_FILE_PATH + "\". Make sure the file is available");
+            System.exit(1);
+            return -1;
         }
+
     }
     @Override
     public IBarrel renewBarrel()throws RemoteException{
