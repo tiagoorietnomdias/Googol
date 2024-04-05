@@ -11,6 +11,8 @@ public interface IBarrel {
 
     public HashSet<Link> getLinkInfoMap() throws RemoteException;
 
-    public ArrayList<Link> searchWord(String wordstoSearch);
+    public ArrayList<Link> searchWord(String wordstoSearch) throws RemoteException;
     public ArrayList<Link> searchLink(String linkToSearch);
+    public HashMap<String, Integer> getNumberOfSearches() throws RemoteException;
+    public IBarrel renewBarrel()throws RemoteException;
 }

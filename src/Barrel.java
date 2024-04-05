@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.*;
 import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.*;
@@ -10,8 +11,14 @@ class Link implements Serializable {
     public String url;
     public String citation;
 
+    public int rank;
+
     public String getUrl() {
         return url;
+    }
+
+    public int getRank() {
+        return rank;
     }
 }
 
@@ -25,6 +32,8 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
     private HashMap<String, HashSet<String>> linkLinkMap = new HashMap<>();
 
     private HashSet<Link> linkInfoMap = new HashSet<>();
+
+    HashMap<String, Integer> numberOfSearches = new HashMap<>();
     private boolean isUpToDate = true;
 
     private static final String PROPERTIES_FILE_PATH = "./src/resources/System.properties";
@@ -96,7 +105,11 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
             return Integer.parseInt(properties.getProperty("port"));
         }
     }
+    @Override
+    public IBarrel renewBarrel()throws RemoteException{
 
+        return this;
+    }
 
     public void updateWordHashMap(String word, String link) {
         wordLinkMap.computeIfAbsent(word, k -> new HashSet<>()).add(link);
@@ -179,7 +192,7 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
                     bufferedWriter.newLine(); // Writes a newline character
                     bufferedWriter.flush(); // Flushes the buffer
                     bufferedWriter.close(); // Closes the writer
-                    System.out.println(wordLinkMap);
+                    // System.out.println(wordLinkMap);
                 } catch (IOException e) {
                     System.err.println("Error writing to file: " + e.getMessage());
                     e.printStackTrace();
@@ -209,9 +222,28 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
     }
 
     @Override
-    public ArrayList<Link> searchWord(String wordstoSearch) {
+    public HashMap<String, Integer> getNumberOfSearches() throws RemoteException {
+        //gateway.renewBarrelState(barrelID, this);
+        return numberOfSearches;
+    }
+
+    @Override
+    public ArrayList<Link> searchWord(String wordstoSearch) throws RemoteException {
 
         String[] words = wordstoSearch.split(" ");
+
+        if (numberOfSearches.containsKey(wordstoSearch)) {
+            int count = numberOfSearches.get(wordstoSearch);
+            numberOfSearches.put(wordstoSearch, count + 1);
+        } else {
+            numberOfSearches.put(wordstoSearch, 1);
+        }
+
+        System.out.println("tamanho do hashmap:"+numberOfSearches.size());
+        for (String key : numberOfSearches.keySet()) {
+            System.out.println(key);
+        }
+
         ArrayList<Link> finalList = new ArrayList<>();
         HashSet<String> associatedLinks;
         if (wordLinkMap.containsKey(words[0])) {
@@ -221,12 +253,15 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
                 for (int j = 1; j < words.length; j++) {
                     if (wordLinkMap.get(words[j]).contains(l)) {
                         linkExists = false;
+                        System.out.println("link exists false");
                         break;
                     }
                 }
                 if (linkExists) {
                     for (Link link : linkInfoMap) {
                         if (link.getUrl().equals(l)) {
+                            link.rank = linkLinkMap.get(l).size();
+                            //System.out.println("Rank:"+link.rank);
                             finalList.add(link);
                             break;
                         }
@@ -237,6 +272,7 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
             }
             System.out.println("Values associated with the word '" + wordstoSearch + "': " + finalList);
         }
+        gateway.renewBarrelState(barrelID, this);
         return finalList;
     }
 
@@ -246,6 +282,7 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         HashSet<String> associatedLinks;
         if (linkLinkMap.containsKey(linktoSearch)) {
             associatedLinks = linkLinkMap.get(linktoSearch);
+            //System.out.println(associatedLinks);
             for (String link : associatedLinks) {
                 Link erm = new Link();
                 erm.url = link;

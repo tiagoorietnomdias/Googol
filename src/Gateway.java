@@ -48,11 +48,47 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
     public void renewBarrelState(int barrelID, IBarrel barrel)throws RemoteException{
         barrels.set(barrelID, barrel);
     }
+
+
     @Override
     public int subscribeClient(ICliente c) throws RemoteException {
         clients.add(c);
         return clients.indexOf(c);
     }
+
+    @Override
+    public ArrayList<Integer> getActiveBarrels() throws RemoteException{
+        ArrayList<Integer> activeBarrels= new ArrayList<>();
+        for (IBarrel barrel: barrels)activeBarrels.add(barrels.indexOf(barrel));
+        return activeBarrels;
+    }
+
+    @Override
+    public List<String> getTop10Searches() throws RemoteException{
+        for(int i=0;i<barrels.size();i++){
+            barrels.set(i,barrels.get(i).renewBarrel());
+        }
+        HashMap<String,Integer> top10= new HashMap<>();
+        for (IBarrel barrel:barrels){
+            top10=barrel.getNumberOfSearches();
+            break;
+        }
+        System.out.println(top10.size());
+        List<Map.Entry<String, Integer>> entryList = new ArrayList<>(top10.entrySet());
+
+        entryList.sort(Map.Entry.comparingByValue(Comparator.reverseOrder()));
+
+        List<String> sortedKeys = new ArrayList<>();
+        int contador=0;
+        for (Map.Entry<String, Integer> entry : entryList) {
+            contador+=1;
+            sortedKeys.add("Top "+contador+": "+entry.getKey()+"\n");
+        }
+
+        System.out.println(sortedKeys);
+    return sortedKeys;
+    }
+
     @Override
     public void putLinksInQueue(List<String> links) throws RemoteException {
         for (String link : links) {
@@ -101,37 +137,25 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
 
                 //link
                 results = barrels.get(0).searchLink(wordToSearch);
+
                 for (Link link : results){
 
                     String string ="URL: " + link.getUrl() + "\n";
                     coolResults.add(string);
                 }
-
+               // System.out.println(coolResults.size());
 
 
             } else {
-                //word
-                //obter todos os links que no seu hashmap tenham a palavra
-                //mete-los numa arraylist
-                //Agrupar de 10 em 10
-                //Para agrupar de 10 em 10 agrupar em gateway ou em cliente?
-                // Eufras: na gateway, é preciso calcular o score da correspondencia Sim, mas primeiro temos de obter as cenas
-                //so depois é que rankeamos porque nao calcular o rank assim que encontramos correspondencia? é isso q vamos fazer
-                //mas pra ja queria so ter o requisito de pesquisar a funfar antes de os ordenar
-                //Cada entrada tem de conter link, titulo e citação com a palavra|||
-                //Assim que encontramos no hashmap, pesquiisar no hashset de links pela palavra
-                //Obter titulo, link,
-                //Como criar citação? obter texto do link com jsoup. Criar citação a partir de texto
-                //A clodia e a mj so foram buscar 50 carateres atras e a frente da palabra pra obter
-                //Era como é que pesquisavamos os links mas ja pensei nisso poggers
                 results = barrels.get(0).searchWord(wordToSearch);
+                results.sort(Comparator.comparingInt(Link::getRank).reversed());
                 for (Link link : results){
 
                     String string ="Title: " + link.title + "\n" + "URL: " + link.getUrl() + "\n" + "Citation: " + link.citation + "\n";
                     coolResults.add(string);
                 }
 
-                System.out.println(results.size());
+             //   System.out.println(results.size());
 
 
 
