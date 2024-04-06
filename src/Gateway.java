@@ -10,7 +10,6 @@ import java.util.*;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 
-
 public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGateBarrel, IGateClient {
 
     public ArrayList<IDownloader> downloaders;
@@ -155,11 +154,16 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
      */
     @Override
     public void insertInQueue(String linkToInsert) throws RemoteException {
+        try {
         if (linkToInsert.startsWith("https://") || linkToInsert.startsWith("http://")) {
             linkQueue.addFirst(linkToInsert);
             System.out.println(linkQueue.getFirst());
         } else {
             System.out.println("Please insert a valid URL");
+        }
+        } catch (NoSuchElementException e) {
+            // Handle NoSuchElementException
+            System.out.println("Please retry! There was a server error");
         }
     }
 

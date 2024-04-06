@@ -4,9 +4,7 @@
  */
 import java.io.*;
 import java.net.*;
-import java.rmi.ConnectException;
 import java.rmi.NotBoundException;
-import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -37,7 +35,7 @@ class Link implements Serializable {
  * and words.
  */
 public class Barrel extends MulticastSocket implements IBarrel, Serializable {
-    String ipAddress;
+    String sendIpAddress;
     ArrayList<Integer> packetCounter = new ArrayList<>();
 
 
@@ -60,6 +58,7 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
 
     public Barrel() throws IOException, RemoteException {
         super(getPortFromProperties());
+        sendIpAddress=getIpFromProperties();
         while(true) {
             try {
                 Registry registry = LocateRegistry.getRegistry("localhost", 1098);
@@ -87,9 +86,10 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         } catch(IOException e){
             System.out.println("Couldn't open " +PROPERTIES_FILE_PATH);
         }
-        ipAddress = properties.getProperty("ipAddress");
+        sendIpAddress = getIpFromProperties();
         filePath = "output" + barrelID + ".txt";
         System.out.println(filePath);
+        this.receiveMessage();
     }
 
     /**
@@ -174,6 +174,18 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         }
 
     }
+    private static String getIpFromProperties() throws IOException {
+        try (FileInputStream input = new FileInputStream(PROPERTIES_FILE_PATH)) {
+            Properties properties = new Properties();
+            properties.load(input);
+            return properties.getProperty("sendIpAddress");
+        } catch(IOException e){
+            System.out.println("Couldn't load \"" + PROPERTIES_FILE_PATH + "\". Make sure the file is available");
+            System.exit(1);
+            return null;
+        }
+
+    }
     /**
      * The `renewBarrel` function in Java returns an `IBarrel` object and may throw a
      * `RemoteException`.
@@ -219,8 +231,7 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
      */
     public void receiveMessage() throws IOException {
 
-
-        InetAddress group = InetAddress.getByName(ipAddress);
+        InetAddress group = InetAddress.getByName(sendIpAddress);
         this.joinGroup(group);
 
         byte[] buffer = new byte[BUFFER_SIZE];
@@ -252,12 +263,15 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
      * The `acknowledgeReception` method sends a UDP packet containing the message "shuptidu" to a
      * specified IP address and port.
      */
-    private void acknowledgeReception() throws IOException {
-        String message = "shuptidu";
-        InetAddress group = InetAddress.getByName(ipAddress);
+    private void acknowledgeReception(int downloaderID) throws IOException {
+        String message = "ack "+downloaderID;
+        InetAddress sendgroup = InetAddress.getByName(sendIpAddress);
         byte[] msg = message.getBytes();
-        DatagramPacket packet = new DatagramPacket(msg, msg.length, group, getPortFromProperties());
+        DatagramPacket packet = new DatagramPacket(msg, msg.length, sendgroup, getPortFromProperties());
         this.send(packet);
+        //String ackMessage = new String(packet.getData(), 0, packet.getLength());
+        //System.out.println("here's what i sent"+ackMessage);
+
     }
 
     //Protocolo: packetID|downloader|downloaderID|LinkAtual|words/links|....
@@ -299,7 +313,7 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
             System.out.println("packetID" + packetID);
             System.out.println("current index in array" + packetCounter.get(downloaderID));
         } else {
-            acknowledgeReception();
+            acknowledgeReception(downloaderID);
             packetCounter.set(downloaderID, packetID);
             if (filePath != null) {
                 try {
@@ -441,8 +455,20 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         return finalList;
     }
 
+    private static void revive(IBarrel barrel) {
+        System.out.println("Barrel crashed, rebooting the mf");
+    }
+
     public static void main(String[] args) throws IOException {
-        Barrel barrel = new Barrel();
-        barrel.receiveMessage();
+        while(true) {
+
+            try {
+                Barrel barrel = new Barrel();
+            } catch (RuntimeException e) {
+                System.out.println("Barrel crashed, rebooting");
+                continue;
+            }
+            break;
+        }
     }
 }
