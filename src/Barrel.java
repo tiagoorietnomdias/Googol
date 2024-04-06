@@ -56,6 +56,8 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
 
     private static int barrelID;
 
+    private boolean isdead = false;
+
     public Barrel() throws IOException, RemoteException {
         super(getPortFromProperties());
         sendIpAddress=getIpFromProperties();
@@ -87,9 +89,85 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
             System.out.println("Couldn't open " +PROPERTIES_FILE_PATH);
         }
         sendIpAddress = getIpFromProperties();
+
+
         filePath = "output" + barrelID + ".txt";
+        File f = new File(filePath);
+        if(f.exists()){
+            this.loadFromTxt(filePath);
+        }
+        if((f.exists() || (wordLinkMap == null && linkLinkMap == null)) || !f.exists()){
+            wordLinkMap = gateway.getupdatedWordMap(barrelID);
+            linkLinkMap = gateway.getupdatedLinkMap(barrelID);
+        }
+        if(wordLinkMap == null && linkLinkMap == null){
+        }
+
         System.out.println(filePath);
         this.receiveMessage();
+    }
+
+    public void loadFromTxt(String filename){
+        for(int i = 0; i < packetCounter.size(); i++) packetCounter.set(i, 0);
+        String message = null;
+        try{
+            FileReader fr = new FileReader(filename);
+            BufferedReader bf = new BufferedReader(fr);
+            message = bf.readLine();
+        } catch(FileNotFoundException e){
+            System.out.println("File not found");
+        } catch(IOException e){
+            System.out.println("Error reading file");
+        }
+        if(message == null){
+            return;
+        }
+
+        String[] parts = message.split("\\|");
+
+        if (parts.length < 6 || !parts[1].equals("downloader")) {
+            return;
+        }
+        int packetID = Integer.parseInt(parts[0]);
+        int downloaderID = Integer.parseInt(parts[2]);
+        String currentLink = parts[3];
+        String type = parts[4];
+        if (downloaderID + 1 > packetCounter.size()) packetCounter.add(-1);
+
+
+        if (packetID - packetCounter.get(downloaderID) > 1) {//Falhou pelo menos um pacote
+            //mecanismo de recuperação
+            isUpToDate = false;
+            ///req to gateway
+            try {
+
+                wordLinkMap = gateway.getupdatedWordMap(barrelID);
+                linkLinkMap = gateway.getupdatedLinkMap(barrelID);
+
+            }catch(RemoteException e){
+                System.out.println("Couldn't connect");
+            }
+            packetCounter.set(downloaderID, packetID);
+            //update
+            System.out.println("packetID" + packetID);
+            System.out.println("current index in array" + packetCounter.get(downloaderID));
+        }
+
+        if (type.equals("links")) {
+            for (int i = 5; i < parts.length; i++) {
+                updateLinkHashMap(currentLink, parts[i]);//adicionar a link atual->link q aponta pra ele
+            }
+
+        } else if (type.equals("words")) {
+            Link linkToAdd = new Link();
+            linkToAdd.title = parts[6];
+            linkToAdd.url = parts[3];
+            linkInfoMap.add(linkToAdd);
+            for (int i = 6; i < parts.length; i++) {
+                updateWordHashMap(parts[i], currentLink);//adicionar a palavra->link atual
+            }
+
+        }
     }
 
     /**
@@ -455,15 +533,32 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         return finalList;
     }
 
-    private static void revive(IBarrel barrel) {
-        System.out.println("Barrel crashed, rebooting the mf");
+    public boolean getBarrelStatus(){
+        return isdead;
+    }
+
+
+    public void shutdown() {
+        this.isdead = true;
+        try{
+            gateway.shutdownBarrel(barrelID, this);
+        } catch(RemoteException e){
+            System.out.println("Error shutting down the barrel");
+        }
     }
 
     public static void main(String[] args) throws IOException {
+
+
         while(true) {
 
             try {
                 Barrel barrel = new Barrel();
+                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                    barrel.shutdown();
+                    System.out.println("Shutting down barrel...");
+                    // Add your cleanup code here
+                }));
             } catch (RuntimeException e) {
                 System.out.println("Barrel crashed, rebooting");
                 continue;

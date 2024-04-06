@@ -9,6 +9,7 @@ import java.rmi.registry.*;
 import java.util.*;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.io.File;
 
 public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGateBarrel, IGateClient {
 
@@ -61,16 +62,29 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
     /**
      * The `subscribeBarrel` function adds a barrel to a list and returns its index in the list.
      *
-     * @param b IBarrel b is an object of type IBarrel, which is being passed as a parameter to the
+     * @param newBarrel IBarrel b is an object of type IBarrel, which is being passed as a parameter to the
      * subscribeBarrel method.
      * @return The method `subscribeBarrel(IBarrel b)` is returning the index of the `IBarrel` object `b`
      * after adding it to the `barrels` list.
      */
 
     @Override
-    public int subscribeBarrel(IBarrel b) throws RemoteException {
-        barrels.add(b);
-        return barrels.indexOf(b);
+    public int subscribeBarrel(IBarrel newBarrel) throws RemoteException {
+        int availableIndex = -1;
+        for(IBarrel barrel : barrels){
+            if(barrel.getBarrelStatus()){
+                availableIndex = barrels.indexOf(barrel);
+                break;
+            }
+        }
+
+        if(availableIndex != -1){
+            barrels.set(availableIndex, newBarrel);
+        }
+        else{
+            barrels.add(newBarrel);
+        }
+        return barrels.indexOf(newBarrel);
     }
     /**
      * The `renewBarrelState` function updates the state of a barrel with a given ID in a collection of
@@ -110,7 +124,10 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
     @Override
     public ArrayList<Integer> getActiveBarrels() throws RemoteException {
         ArrayList<Integer> activeBarrels = new ArrayList<>();
-        for (IBarrel barrel : barrels) activeBarrels.add(barrels.indexOf(barrel));
+        for (IBarrel barrel : barrels){
+            if(!barrel.getBarrelStatus())
+            activeBarrels.add(barrels.indexOf(barrel));
+        }
         return activeBarrels;
     }
 
@@ -126,8 +143,10 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
     public List<String> getTop10Searches() throws RemoteException {
         HashMap<String, Integer> top10 = new HashMap<>();
         for (IBarrel barrel : barrels) {
-            top10 = barrel.getNumberOfSearches();
-            break;
+            if(!barrel.getBarrelStatus()) {
+                top10 = barrel.getNumberOfSearches();
+                break;
+            }
         }
         System.out.println(top10.size());
         List<Map.Entry<String, Integer>> entryList = new ArrayList<>(top10.entrySet());
@@ -207,7 +226,7 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
         int i = 0;
         HashMap<String, HashSet<String>> updatedWordMap = null;
         for (IBarrel barrel : barrels) {
-            if (barrel.returnUpToDateState() && (i != barrelIDRequesting)) {
+            if (barrel.returnUpToDateState() && (i != barrelIDRequesting) && !barrel.getBarrelStatus()) {
                 updatedWordMap = barrel.getWordLinkMap();
                 break;
             }
@@ -230,7 +249,7 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
         int i = 0;
         HashMap<String, HashSet<String>> updatedLinkMap = null;
         for (IBarrel barrel : barrels) {
-            if (barrel.returnUpToDateState() && (i != barrelIDRequesting)) {
+            if (barrel.returnUpToDateState() && (i != barrelIDRequesting) && !barrel.getBarrelStatus()) {
                 updatedLinkMap = barrel.getLinkLinkMap();
                 break;
 
@@ -254,11 +273,19 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
     public ArrayList<String> pesquisa(String wordToSearch) throws RemoteException {
         ArrayList<Link> results = new ArrayList<>();
         ArrayList<String> coolResults = new ArrayList<>();
+        int currentBarrel = 0;
         try{
         if (wordToSearch.startsWith("http://") || wordToSearch.startsWith("https://")) {
 
             //link
-            results = barrels.get(0).searchLink(wordToSearch);
+
+            for(IBarrel barrel : barrels){
+                if(barrel.returnUpToDateState() && !barrel.getBarrelStatus()){
+                    currentBarrel = barrels.indexOf(barrel);
+                    break;
+                }
+            }
+            results = barrels.get(currentBarrel).searchLink(wordToSearch);
 
             for (Link link : results) {
 
@@ -269,7 +296,7 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
 
 
         } else {
-            results = barrels.get(0).searchWord(wordToSearch);
+            results = barrels.get(currentBarrel).searchWord(wordToSearch);
             results.sort(Comparator.comparingInt(Link::getRank).reversed());
             for (Link link : results) {
 
@@ -289,6 +316,9 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
         return coolResults;
     }
 
+    public void shutdownBarrel(int barrelID, IBarrel barrel){
+        barrels.set(barrelID, barrel);
+    }
     public static void main(String args[]) {
         try {
             Gateway gateway = new Gateway();

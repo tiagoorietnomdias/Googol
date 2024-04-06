@@ -5,14 +5,20 @@ import java.util.HashSet;
 
 public interface IBarrel {
     boolean returnUpToDateState();
-    public HashMap<String, HashSet<String>> getWordLinkMap();
+    HashMap<String, HashSet<String>> getWordLinkMap();
 
-    public HashMap<String, HashSet<String>> getLinkLinkMap();
+    HashMap<String, HashSet<String>> getLinkLinkMap();
 
-    public HashSet<Link> getLinkInfoMap() throws RemoteException;
+    HashSet<Link> getLinkInfoMap() throws RemoteException;
+    ArrayList<Link> searchWord(String wordstoSearch) throws RemoteException;
+    ArrayList<Link> searchLink(String linkToSearch);
+    HashMap<String, Integer> getNumberOfSearches() throws RemoteException;
+    IBarrel renewBarrel()throws RemoteException;
 
-    public ArrayList<Link> searchWord(String wordstoSearch) throws RemoteException;
-    public ArrayList<Link> searchLink(String linkToSearch);
-    public HashMap<String, Integer> getNumberOfSearches() throws RemoteException;
-    public IBarrel renewBarrel()throws RemoteException;
+    void loadFromTxt(String filename);
+    boolean getBarrelStatus();
+
+    void shutdown();
+
+
 }

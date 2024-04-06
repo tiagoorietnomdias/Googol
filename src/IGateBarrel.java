@@ -13,6 +13,8 @@ public interface IGateBarrel extends Remote {
 
     public void renewBarrelState(int barrelID, IBarrel barrel)throws RemoteException;
 
+    public void shutdownBarrel(int barrelID, IBarrel barrel)throws RemoteException;
+
 
 }
 
