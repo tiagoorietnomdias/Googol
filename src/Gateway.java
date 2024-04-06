@@ -9,7 +9,6 @@ import java.rmi.registry.*;
 import java.util.*;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
-import java.io.File;
 
 public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGateBarrel, IGateClient {
 
@@ -258,6 +257,21 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
             i++;
         }
         return updatedLinkMap;
+    }
+
+    @Override
+    public HashSet<Link> getupdatedInfoMap(int barrelID) throws RemoteException {
+        int i = 0;
+        HashSet<Link> updatedInfoMap = new HashSet<>();
+        for (IBarrel barrel : barrels) {
+            if (barrel.returnUpToDateState() && (i != barrelID) && !barrel.getBarrelStatus()) {
+                updatedInfoMap = barrel.getLinkInfoMap();
+                break;
+
+            }
+            i++;
+        }
+        return updatedInfoMap;
     }
 
     /**

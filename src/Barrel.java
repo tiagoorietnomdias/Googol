@@ -2,6 +2,10 @@
  * The `Barrel` class in Java implements a system for managing and processing links and words,
  * including methods for searching and updating link and word maps.
  */
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
+
 import java.io.*;
 import java.net.*;
 import java.rmi.NotBoundException;
@@ -99,8 +103,9 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         File f = new File(filePath);
         wordLinkMap = gateway.getupdatedWordMap(barrelID);
         linkLinkMap = gateway.getupdatedLinkMap(barrelID);
+        linkInfoMap = gateway.getupdatedInfoMap(barrelID);
         if((wordLinkMap == null && linkLinkMap == null) || !f.exists() || (wordLinkMap.size() == 0 && linkLinkMap.size() == 0)){
-            System.out.println("hiiiii :333");
+            System.out.println("No barrels with updated info..reading text file");
             this.loadFromTxt(filePath);
 
         }
@@ -379,8 +384,9 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
             do {
                 wordLinkMap = gateway.getupdatedWordMap(barrelID);
                 linkLinkMap = gateway.getupdatedLinkMap(barrelID);
+                linkInfoMap = gateway.getupdatedInfoMap(barrelID);
 
-            } while (gateway.getupdatedWordMap(barrelID) != null && gateway.getupdatedLinkMap(barrelID) != null);
+            } while (gateway.getupdatedWordMap(barrelID) != null && gateway.getupdatedLinkMap(barrelID) != null && gateway.getupdatedInfoMap(barrelID) != null);
             packetCounter.set(downloaderID, packetID);
             //update
             System.out.println("packetID" + packetID);
@@ -482,17 +488,19 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
                 if (linkExists) {
                     for (Link link : linkInfoMap) {
                         if (link.getUrl().equals(l)) {
-                            System.out.println();
-                            link.rank = linkLinkMap.get(l).size();
+                            System.out.println(link.getUrl());
+                            System.out.println(linkLinkMap.get(link.getUrl()));
+                            if (linkLinkMap.get(link.getUrl())!=null)link.rank = linkLinkMap.get(link.getUrl()).size();
+                            else link.rank=0;
                             //System.out.println("Rank:"+link.rank);
                             finalList.add(link);
                             break;
-                        }
+                        }}
 
                     }
                 }
 
-            }
+
             System.out.println("Values associated with the word '" + wordstoSearch + "': " + finalList);
         }
         gateway.renewBarrelState(barrelID, this);
