@@ -81,7 +81,8 @@ public class Cliente extends UnicastRemoteObject implements ICliente {
                     System.out.print("Escreva termo a pesquisar:");
                     String pesquisa = scanner.nextLine();
                     ArrayList<String> results = gateway.pesquisa(pesquisa);
-                    if (results.size() == 0) System.out.println("No results found for: " + pesquisa);
+                    if(results==null) System.out.println("No servers currently available! please try again later");
+                    else if (results.size() == 0) System.out.println("No results found for: " + pesquisa);
                     else {
                         int currentIndex = 0;
                         currentIndex = showNextTen(currentIndex, results);

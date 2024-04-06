@@ -254,6 +254,7 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
     public ArrayList<String> pesquisa(String wordToSearch) throws RemoteException {
         ArrayList<Link> results = new ArrayList<>();
         ArrayList<String> coolResults = new ArrayList<>();
+        try{
         if (wordToSearch.startsWith("http://") || wordToSearch.startsWith("https://")) {
 
             //link
@@ -279,6 +280,10 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
             //   System.out.println(results.size());
 
 
+        }}
+        catch (IndexOutOfBoundsException e){
+            System.out.println("Server is currently down, try again later");
+            return null;
         }
         //Construir string a retornar a client
         return coolResults;

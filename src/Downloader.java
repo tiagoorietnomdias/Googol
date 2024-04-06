@@ -281,27 +281,30 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
         while (true) {
             List<String> words = new ArrayList<>();
             List<String> links = new ArrayList<>();
+            int currentpacket= packetID;
             String url = null;
             do {
                 try {
                     url = gateway.getLastLink();
                 } catch (NoSuchElementException | InterruptedException e) {
-                    System.out.println("found nothing imma keep lookin");
+                    System.out.println("found nothing in the queue");
                 }
             } while (url == null);
             LinkScraper(url, words, links);
             int result1 = 0, result2 = 0;
             try {
                 result1 = messageBuilder(new ArrayList<>(words), 1, url);
-                result2 = messageBuilder(new ArrayList<>(links), 0, url);
+                if(result1==-1){
+                    //links.clear();
+                    links.add(links.size(),url);
+                    packetID=currentpacket;
+                }
+                else result2 = messageBuilder(new ArrayList<>(links), 0, url);
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
-            if (result1 == -1 || result2 == -1) {
-                links.clear();
-                links.add(url);
-            }
+
 
             gateway.putLinksInQueue(links);
 
