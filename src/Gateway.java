@@ -73,6 +73,7 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
         int availableIndex = -1;
         for(IBarrel barrel : barrels){
             if(barrel.getBarrelStatus()){
+                System.out.println("");
                 availableIndex = barrels.indexOf(barrel);
                 break;
             }
@@ -224,7 +225,7 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
     @Override
     public HashMap<String, HashSet<String>> getupdatedWordMap(int barrelIDRequesting) throws RemoteException {
         int i = 0;
-        HashMap<String, HashSet<String>> updatedWordMap = null;
+        HashMap<String, HashSet<String>> updatedWordMap = new HashMap<>();
         for (IBarrel barrel : barrels) {
             if (barrel.returnUpToDateState() && (i != barrelIDRequesting) && !barrel.getBarrelStatus()) {
                 updatedWordMap = barrel.getWordLinkMap();
@@ -247,7 +248,7 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
     @Override
     public HashMap<String, HashSet<String>> getupdatedLinkMap(int barrelIDRequesting) throws RemoteException {
         int i = 0;
-        HashMap<String, HashSet<String>> updatedLinkMap = null;
+        HashMap<String, HashSet<String>> updatedLinkMap = new HashMap<>();
         for (IBarrel barrel : barrels) {
             if (barrel.returnUpToDateState() && (i != barrelIDRequesting) && !barrel.getBarrelStatus()) {
                 updatedLinkMap = barrel.getLinkLinkMap();
@@ -317,6 +318,7 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
     }
 
     public void shutdownBarrel(int barrelID, IBarrel barrel){
+        System.out.println("Barrel " + barrelID + "just died. Here's proof: ");
         barrels.set(barrelID, barrel);
     }
     public static void main(String args[]) {

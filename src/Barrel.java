@@ -60,6 +60,10 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
 
     public Barrel() throws IOException, RemoteException {
         super(getPortFromProperties());
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                shutdown(barrelID);
+                System.out.println("Barrel " + barrelID + "just died. Here's proof: " + getBarrelStatus());
+        }));
         sendIpAddress=getIpFromProperties();
         while(true) {
             try {
@@ -93,81 +97,61 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
 
         filePath = "output" + barrelID + ".txt";
         File f = new File(filePath);
-        if(f.exists()){
+        wordLinkMap = gateway.getupdatedWordMap(barrelID);
+        linkLinkMap = gateway.getupdatedLinkMap(barrelID);
+        if((wordLinkMap == null && linkLinkMap == null) || !f.exists() || (wordLinkMap.size() == 0 && linkLinkMap.size() == 0)){
+            System.out.println("hiiiii :333");
             this.loadFromTxt(filePath);
-        }
-        if((f.exists() || (wordLinkMap == null && linkLinkMap == null)) || !f.exists()){
-            wordLinkMap = gateway.getupdatedWordMap(barrelID);
-            linkLinkMap = gateway.getupdatedLinkMap(barrelID);
-        }
-        if(wordLinkMap == null && linkLinkMap == null){
-        }
 
+        }
+        gateway.renewBarrelState(barrelID, this);
         System.out.println(filePath);
         this.receiveMessage();
     }
 
     public void loadFromTxt(String filename){
-        for(int i = 0; i < packetCounter.size(); i++) packetCounter.set(i, 0);
         String message = null;
         try{
+
             FileReader fr = new FileReader(filename);
             BufferedReader bf = new BufferedReader(fr);
-            message = bf.readLine();
+            while(bf.readLine() != null) {
+                message = bf.readLine();
+                if(message == null){
+                    return;
+                }
+                String[] parts = message.split("\\|");
+
+                if (parts.length < 6 || !parts[1].equals("downloader")) {
+                    return;
+                }
+                int packetID = Integer.parseInt(parts[0]);
+                int downloaderID = Integer.parseInt(parts[2]);
+                String currentLink = parts[3];
+                String type = parts[4];
+
+                if (type.equals("links")) {
+                    for (int i = 5; i < parts.length; i++) {
+                        updateLinkHashMap(currentLink, parts[i]);//adicionar a link atual->link q aponta pra ele
+                    }
+
+                } else if (type.equals("words")) {
+                    Link linkToAdd = new Link();
+                    linkToAdd.title = parts[6];
+                    linkToAdd.url = parts[3];
+                    linkInfoMap.add(linkToAdd);
+                    for (int i = 6; i < parts.length; i++) {
+                        updateWordHashMap(parts[i], currentLink);//adicionar a palavra->link atual
+                    }
+
+                }
+            }
         } catch(FileNotFoundException e){
             System.out.println("File not found");
         } catch(IOException e){
             System.out.println("Error reading file");
         }
-        if(message == null){
-            return;
-        }
 
-        String[] parts = message.split("\\|");
-
-        if (parts.length < 6 || !parts[1].equals("downloader")) {
-            return;
-        }
-        int packetID = Integer.parseInt(parts[0]);
-        int downloaderID = Integer.parseInt(parts[2]);
-        String currentLink = parts[3];
-        String type = parts[4];
-        if (downloaderID + 1 > packetCounter.size()) packetCounter.add(-1);
-
-
-        if (packetID - packetCounter.get(downloaderID) > 1) {//Falhou pelo menos um pacote
-            //mecanismo de recuperação
-            isUpToDate = false;
-            ///req to gateway
-            try {
-
-                wordLinkMap = gateway.getupdatedWordMap(barrelID);
-                linkLinkMap = gateway.getupdatedLinkMap(barrelID);
-
-            }catch(RemoteException e){
-                System.out.println("Couldn't connect");
-            }
-            packetCounter.set(downloaderID, packetID);
-            //update
-            System.out.println("packetID" + packetID);
-            System.out.println("current index in array" + packetCounter.get(downloaderID));
-        }
-
-        if (type.equals("links")) {
-            for (int i = 5; i < parts.length; i++) {
-                updateLinkHashMap(currentLink, parts[i]);//adicionar a link atual->link q aponta pra ele
-            }
-
-        } else if (type.equals("words")) {
-            Link linkToAdd = new Link();
-            linkToAdd.title = parts[6];
-            linkToAdd.url = parts[3];
-            linkInfoMap.add(linkToAdd);
-            for (int i = 6; i < parts.length; i++) {
-                updateWordHashMap(parts[i], currentLink);//adicionar a palavra->link atual
-            }
-
-        }
     }
 
     /**
@@ -287,7 +271,12 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
      * link associated with a particular word.
      */
     public void updateWordHashMap(String word, String link) {
-        wordLinkMap.computeIfAbsent(word, k -> new HashSet<>()).add(link);
+        if(wordLinkMap == null){
+            wordLinkMap.put(word, new HashSet<>()).add(link);
+        }
+        else {
+            wordLinkMap.computeIfAbsent(word, k -> new HashSet<>()).add(link);
+        }
     }
 
     /**
@@ -300,7 +289,13 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
      * add to the HashSet associated with the `currentLink` key in the `linkLinkMap`.
      */
     public void updateLinkHashMap(String currentLink, String linkToAdd) {
-        linkLinkMap.computeIfAbsent(currentLink, k -> new HashSet<>()).add(linkToAdd);
+        if(linkLinkMap == null){
+
+            linkLinkMap.put(currentLink, new HashSet<>()).add(linkToAdd);
+        }
+        else {
+            linkLinkMap.computeIfAbsent(currentLink, k -> new HashSet<>()).add(linkToAdd);
+        }
     }
 
     /**
@@ -487,6 +482,7 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
                 if (linkExists) {
                     for (Link link : linkInfoMap) {
                         if (link.getUrl().equals(l)) {
+                            System.out.println();
                             link.rank = linkLinkMap.get(l).size();
                             //System.out.println("Rank:"+link.rank);
                             finalList.add(link);
@@ -538,7 +534,7 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
     }
 
 
-    public void shutdown() {
+    public void shutdown(int bID) {
         this.isdead = true;
         try{
             gateway.shutdownBarrel(barrelID, this);
@@ -548,21 +544,27 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
     }
 
     public static void main(String[] args) throws IOException {
-
-
+        boolean crash = false;
+        int bID = 0;
         while(true) {
 
-            try {
+            //try {
                 Barrel barrel = new Barrel();
-                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                    barrel.shutdown();
-                    System.out.println("Shutting down barrel...");
-                    // Add your cleanup code here
-                }));
+                if(crash){
+                    barrel.shutdown(bID);
+                }
+                bID = barrelID;
+                if(crash){
+                    barrel.shutdown(bID);
+                }
+                /*
             } catch (RuntimeException e) {
                 System.out.println("Barrel crashed, rebooting");
+                crash = true;
                 continue;
             }
+
+                 */
             break;
         }
     }

@@ -18,7 +18,7 @@ public interface IBarrel {
     void loadFromTxt(String filename);
     boolean getBarrelStatus();
 
-    void shutdown();
+    void shutdown(int bID);
 
 
 }
