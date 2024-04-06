@@ -267,6 +267,8 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
         } catch (IOException e) {
             System.out.println("Malformed URL");
 
+        } catch (IllegalArgumentException e) {
+            System.out.println("Reached the end of site");
         }
     }
 
