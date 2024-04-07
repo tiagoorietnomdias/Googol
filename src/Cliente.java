@@ -76,6 +76,7 @@ public class Cliente extends UnicastRemoteObject implements ICliente {
                 String input = scanner.nextLine();
                 if (input.equalsIgnoreCase("3")) {
                     System.out.println("Exiting...");
+                    System.exit(0);
                     break;
                 } else if (input.equalsIgnoreCase("1")) {
                     System.out.print("Escreva termo a pesquisar:");

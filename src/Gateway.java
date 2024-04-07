@@ -157,7 +157,7 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
         int contador = 0;
         for (Map.Entry<String, Integer> entry : entryList) {
             contador += 1;
-            sortedKeys.add("Top " + contador + ": " + entry.getKey() + "\n");
+            sortedKeys.add("Top " + contador + ": " + entry.getKey() + " - " + entry.getValue());
         }
 
         System.out.println(sortedKeys);
