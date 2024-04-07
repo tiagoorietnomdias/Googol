@@ -145,7 +145,6 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
         for (IBarrel barrel : barrels) {
             if(!barrel.getBarrelStatus()) {
                 top10 = barrel.getNumberOfSearches();
-                break;
             }
         }
         System.out.println(top10.size());
@@ -311,7 +310,11 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
 
 
         } else {
-            results = barrels.get(currentBarrel).searchWord(wordToSearch);
+            int d = 26 / getActiveBarrels().size();
+            int barrelIndex = (26/d) - 1;
+
+
+            results = barrels.get(barrelIndex).searchWord(wordToSearch);
             results.sort(Comparator.comparingInt(Link::getRank).reversed());
             for (Link link : results) {
 
@@ -329,6 +332,19 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
         }
         //Construir string a retornar a client
         return coolResults;
+    }
+
+    public void updateNumberofSearches(int barrelID, IBarrel barrel){
+        for(IBarrel b : barrels){
+            if(barrels.indexOf(b) != barrelID && !b.getBarrelStatus()){
+                try{
+                    HashMap<String, Integer> numberSearches =  barrels.get(barrelID).getNumberOfSearches();
+                    b.setNumberOfSearches(numberSearches);
+                } catch(RemoteException e){
+                    System.out.println("Remote exception");
+                }
+            }
+        }
     }
 
     public void shutdownBarrel(int barrelID, IBarrel barrel){

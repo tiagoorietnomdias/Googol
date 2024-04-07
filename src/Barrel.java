@@ -520,7 +520,9 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
 
             System.out.println("Values associated with the word '" + wordstoSearch + "': " + finalList);
         }
+
         gateway.renewBarrelState(barrelID, this);
+        gateway.updateNumberofSearches(barrelID, this);
         return finalList;
     }
 
@@ -553,6 +555,11 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         }
         return finalList;
     }
+
+    public void setNumberOfSearches(HashMap<String, Integer> newNumberOfSearches){
+        this.numberOfSearches = newNumberOfSearches;
+    }
+
 
     public boolean getBarrelStatus() {
         return isdead;

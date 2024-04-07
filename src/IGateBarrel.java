@@ -11,8 +11,8 @@ public interface IGateBarrel extends Remote {
     public HashMap<String, HashSet<String>> getupdatedLinkMap(int barrelIDRequesting) throws  RemoteException;
     public HashSet<Link> getupdatedInfoMap(int barrelID) throws RemoteException;
     public void renewBarrelState(int barrelID, IBarrel barrel)throws RemoteException;
-
     public void shutdownBarrel(int barrelID, IBarrel barrel)throws RemoteException;
+    public void updateNumberofSearches(int barrelID, IBarrel barrel) throws RemoteException;
 
 
 

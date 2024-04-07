@@ -20,5 +20,7 @@ public interface IBarrel {
 
     void shutdown(int bID);
 
+    public void setNumberOfSearches(HashMap<String, Integer> newNumberOfSearches);
+
 
 }
