@@ -79,7 +79,7 @@ public class Cliente extends UnicastRemoteObject implements ICliente {
                     break;
                 } else if (input.equalsIgnoreCase("1")) {
                     System.out.print("Escreva termo a pesquisar:");
-                    String pesquisa = scanner.nextLine();
+                    String pesquisa = scanner.nextLine().toLowerCase();
                     ArrayList<String> results = gateway.pesquisa(pesquisa);
                     if(results==null) System.out.println("No servers currently available! please try again later");
                     else if (results.size() == 0) System.out.println("No results found for: " + pesquisa);
