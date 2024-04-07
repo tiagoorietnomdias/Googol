@@ -2,6 +2,7 @@
  * The `Barrel` class in Java implements a system for managing and processing links and words,
  * including methods for searching and updating link and word maps.
  */
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
@@ -65,11 +66,11 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
     public Barrel() throws IOException, RemoteException {
         super(getPortFromProperties());
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                shutdown(barrelID);
-                System.out.println("Barrel " + barrelID + "just died. Here's proof: " + getBarrelStatus());
+            shutdown(barrelID);
+            System.out.println("Barrel " + barrelID + "just died. Here's proof: " + getBarrelStatus());
         }));
-        sendIpAddress=getIpFromProperties();
-        while(true) {
+        sendIpAddress = getIpFromProperties();
+        while (true) {
             try {
                 Registry registry = LocateRegistry.getRegistry("localhost", 1098);
                 gateway = (IGateBarrel) registry.lookup("GatewayBarrel");
@@ -78,7 +79,7 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
                 throw new RuntimeException(e);
             } catch (RemoteException e) {
                 try {
-                    System.out.println("Barrel" + barrelID +" couldn't connect, waiting 3 second and retrying...");
+                    System.out.println("Barrel" + barrelID + " couldn't connect, waiting 3 second and retrying...");
                     Thread.sleep(3000);
                     System.out.println("Resuming Connection...");
                     continue;
@@ -93,8 +94,8 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         Properties properties = new Properties();
         try (FileInputStream input = new FileInputStream(PROPERTIES_FILE_PATH)) {
             properties.load(input);
-        } catch(IOException e){
-            System.out.println("Couldn't open " +PROPERTIES_FILE_PATH);
+        } catch (IOException e) {
+            System.out.println("Couldn't open " + PROPERTIES_FILE_PATH);
         }
         sendIpAddress = getIpFromProperties();
 
@@ -104,7 +105,7 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         wordLinkMap = gateway.getupdatedWordMap(barrelID);
         linkLinkMap = gateway.getupdatedLinkMap(barrelID);
         linkInfoMap = gateway.getupdatedInfoMap(barrelID);
-        if((wordLinkMap == null && linkLinkMap == null) || !f.exists() || (wordLinkMap.size() == 0 && linkLinkMap.size() == 0)){
+        if ((wordLinkMap == null && linkLinkMap == null) || !f.exists() || (wordLinkMap.size() == 0 && linkLinkMap.size() == 0)) {
             System.out.println("No barrels with updated info..reading text file");
             this.loadFromTxt(filePath);
 
@@ -114,15 +115,15 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         this.receiveMessage();
     }
 
-    public void loadFromTxt(String filename){
+    public void loadFromTxt(String filename) {
         String message = null;
-        try{
+        try {
 
             FileReader fr = new FileReader(filename);
             BufferedReader bf = new BufferedReader(fr);
-            while(bf.readLine() != null) {
+            while (bf.readLine() != null) {
                 message = bf.readLine();
-                if(message == null){
+                if (message == null) {
                     return;
                 }
                 String[] parts = message.split("\\|");
@@ -145,15 +146,22 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
                     linkToAdd.title = parts[6];
                     linkToAdd.url = parts[3];
                     linkInfoMap.add(linkToAdd);
+                    StringBuilder citation = new StringBuilder();
                     for (int i = 6; i < parts.length; i++) {
+                        if (i < 50) {
+                            citation.append(parts[i]);
+                            citation.append(" ");
+                            if(i==25)citation.append("\n");
+                        }
                         updateWordHashMap(parts[i], currentLink);//adicionar a palavra->link atual
                     }
+                    linkToAdd.citation = String.valueOf(citation);
 
                 }
             }
-        } catch(FileNotFoundException e){
+        } catch (FileNotFoundException e) {
             System.out.println("File not found");
-        } catch(IOException e){
+        } catch (IOException e) {
             System.out.println("Error reading file");
         }
 
@@ -204,6 +212,7 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
     }
 
     // Method to print the contents of linkLinkMap
+
     /**
      * The function `printLinkLinkMap` prints the contents of a map where each key is a link and the
      * corresponding value is a set of linked links.
@@ -234,25 +243,27 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
             Properties properties = new Properties();
             properties.load(input);
             return Integer.parseInt(properties.getProperty("port"));
-        } catch(IOException e){
+        } catch (IOException e) {
             System.out.println("Couldn't load \"" + PROPERTIES_FILE_PATH + "\". Make sure the file is available");
             System.exit(1);
             return -1;
         }
 
     }
+
     private static String getIpFromProperties() throws IOException {
         try (FileInputStream input = new FileInputStream(PROPERTIES_FILE_PATH)) {
             Properties properties = new Properties();
             properties.load(input);
             return properties.getProperty("sendIpAddress");
-        } catch(IOException e){
+        } catch (IOException e) {
             System.out.println("Couldn't load \"" + PROPERTIES_FILE_PATH + "\". Make sure the file is available");
             System.exit(1);
             return null;
         }
 
     }
+
     /**
      * The `renewBarrel` function in Java returns an `IBarrel` object and may throw a
      * `RemoteException`.
@@ -261,7 +272,7 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
      * In this case, it is returning the current object (`this`).
      */
     @Override
-    public IBarrel renewBarrel()throws RemoteException{
+    public IBarrel renewBarrel() throws RemoteException {
 
         return this;
     }
@@ -271,15 +282,14 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
      * the word is not already present in the HashMap.
      *
      * @param word The `word` parameter is a String representing a word that will be used as a key in a
-     * HashMap.
+     *             HashMap.
      * @param link The `link` parameter in the `updateWordHashMap` method is a String that represents a
-     * link associated with a particular word.
+     *             link associated with a particular word.
      */
     public void updateWordHashMap(String word, String link) {
-        if(wordLinkMap == null){
+        if (wordLinkMap == null) {
             wordLinkMap.put(word, new HashSet<>()).add(link);
-        }
-        else {
+        } else {
             wordLinkMap.computeIfAbsent(word, k -> new HashSet<>()).add(link);
         }
     }
@@ -289,16 +299,15 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
      * HashMap.
      *
      * @param currentLink The `currentLink` parameter is a String that represents the key in the
-     * `linkLinkMap` HashMap where we want to add a new link.
-     * @param linkToAdd The `linkToAdd` parameter is a String representing the link that you want to
-     * add to the HashSet associated with the `currentLink` key in the `linkLinkMap`.
+     *                    `linkLinkMap` HashMap where we want to add a new link.
+     * @param linkToAdd   The `linkToAdd` parameter is a String representing the link that you want to
+     *                    add to the HashSet associated with the `currentLink` key in the `linkLinkMap`.
      */
     public void updateLinkHashMap(String currentLink, String linkToAdd) {
-        if(linkLinkMap == null){
+        if (linkLinkMap == null) {
 
             linkLinkMap.put(currentLink, new HashSet<>()).add(linkToAdd);
-        }
-        else {
+        } else {
             linkLinkMap.computeIfAbsent(currentLink, k -> new HashSet<>()).add(linkToAdd);
         }
     }
@@ -342,7 +351,7 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
      * specified IP address and port.
      */
     private void acknowledgeReception(int downloaderID) throws IOException {
-        String message = "ack "+downloaderID;
+        String message = "ack " + downloaderID;
         InetAddress sendgroup = InetAddress.getByName(sendIpAddress);
         byte[] msg = message.getBytes();
         DatagramPacket packet = new DatagramPacket(msg, msg.length, sendgroup, getPortFromProperties());
@@ -354,15 +363,14 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
 
     //Protocolo: packetID|downloader|downloaderID|LinkAtual|words/links|....
     //Protocolo:     0   |     1    |      2     |    3    |      4    |....
+
     /**
      * The `processMessage` function in Java processes a message, updates packet and file information,
      * and handles different types of data based on the message content.
      *
      * @param message The `processMessage` method takes a `String` message as input and processes it
-     * according to the specified logic. The message is split into parts using the pipe character as
-     * the delimiter.
-     *
-     *
+     *                according to the specified logic. The message is split into parts using the pipe character as
+     *                the delimiter.
      */
     private void processMessage(String message) throws IOException {
         String[] parts = message.split("\\|");
@@ -420,14 +428,21 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
                 updateLinkHashMap(currentLink, parts[i]);//adicionar a link atual->link q aponta pra ele
             }
 
-        } else if (type.equals("words")) {
+        }else if (type.equals("words")) {
             Link linkToAdd = new Link();
             linkToAdd.title = parts[6];
             linkToAdd.url = parts[3];
             linkInfoMap.add(linkToAdd);
+            StringBuilder citation = new StringBuilder();
             for (int i = 6; i < parts.length; i++) {
+                if (i < 50) {
+                    citation.append(parts[i]);
+                    citation.append(" ");
+                    if(i==25)citation.append("\n");
+                }
                 updateWordHashMap(parts[i], currentLink);//adicionar a palavra->link atual
             }
+            linkToAdd.citation = String.valueOf(citation);
 
         }
     }
@@ -450,9 +465,9 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
      * associated links, calculates ranks, and renews state using a gateway.
      *
      * @param wordstoSearch The `searchWord` method you provided seems to be a part of a remote service
-     * that searches for links associated with a given set of words. The method splits the input
-     * `wordstoSearch` into individual words, keeps track of the number of searches for each word, and
-     * then searches for links associated
+     *                      that searches for links associated with a given set of words. The method splits the input
+     *                      `wordstoSearch` into individual words, keeps track of the number of searches for each word, and
+     *                      then searches for links associated
      * @return The method `searchWord` is returning an ArrayList of Link objects.
      */
     @Override
@@ -467,7 +482,7 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
             numberOfSearches.put(wordstoSearch, 1);
         }
 
-        System.out.println("tamanho do hashmap:"+numberOfSearches.size());
+        System.out.println("tamanho do hashmap:" + numberOfSearches.size());
         for (String key : numberOfSearches.keySet()) {
             System.out.println(key);
         }
@@ -490,15 +505,17 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
                         if (link.getUrl().equals(l)) {
                             System.out.println(link.getUrl());
                             System.out.println(linkLinkMap.get(link.getUrl()));
-                            if (linkLinkMap.get(link.getUrl())!=null)link.rank = linkLinkMap.get(link.getUrl()).size();
-                            else link.rank=0;
+                            if (linkLinkMap.get(link.getUrl()) != null)
+                                link.rank = linkLinkMap.get(link.getUrl()).size();
+                            else link.rank = 0;
                             //System.out.println("Rank:"+link.rank);
                             finalList.add(link);
                             break;
-                        }}
-
+                        }
                     }
+
                 }
+            }
 
 
             System.out.println("Values associated with the word '" + wordstoSearch + "': " + finalList);
@@ -513,9 +530,9 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
      * associated links.
      *
      * @param linktoSearch The `searchLink` method you provided takes a `String` parameter named
-     * `linktoSearch`, which represents the link that you want to search for in the `linkLinkMap`. The
-     * method then retrieves the associated links for the given input link and returns a list of `Link`
-     * objects containing those
+     *                     `linktoSearch`, which represents the link that you want to search for in the `linkLinkMap`. The
+     *                     method then retrieves the associated links for the given input link and returns a list of `Link`
+     *                     objects containing those
      * @return The `searchLink` method returns an ArrayList of Link objects that are associated with
      * the input `linktoSearch`. If the input `linktoSearch` is found in the `linkLinkMap`, the method
      * retrieves the associated links from the map, creates Link objects for each associated link, adds
@@ -537,16 +554,16 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         return finalList;
     }
 
-    public boolean getBarrelStatus(){
+    public boolean getBarrelStatus() {
         return isdead;
     }
 
 
     public void shutdown(int bID) {
         this.isdead = true;
-        try{
+        try {
             gateway.shutdownBarrel(barrelID, this);
-        } catch(RemoteException e){
+        } catch (RemoteException e) {
             System.out.println("Error shutting down the barrel");
         }
     }
@@ -554,17 +571,17 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
     public static void main(String[] args) throws IOException {
         boolean crash = false;
         int bID = 0;
-        while(true) {
+        while (true) {
 
             //try {
-                Barrel barrel = new Barrel();
-                if(crash){
-                    barrel.shutdown(bID);
-                }
-                bID = barrelID;
-                if(crash){
-                    barrel.shutdown(bID);
-                }
+            Barrel barrel = new Barrel();
+            if (crash) {
+                barrel.shutdown(bID);
+            }
+            bID = barrelID;
+            if (crash) {
+                barrel.shutdown(bID);
+            }
                 /*
             } catch (RuntimeException e) {
                 System.out.println("Barrel crashed, rebooting");
