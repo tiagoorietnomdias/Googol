@@ -27,16 +27,16 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
 // does:
     public Gateway() throws IOException, AlreadyBoundException {
         super();
-        System.setProperty("java.rmi.server.hostname", "192.168.1.83");
+        System.setProperty("java.rmi.server.hostname", "127.0.0.1");
 
 
         queue = new int[10];
         downloaders = new ArrayList<>();
         barrels = new ArrayList<>();
         clients = new ArrayList<>();
-        Registry downloaderRegistry = LocateRegistry.getRegistry();
-        Registry barrelRegistry = LocateRegistry.getRegistry();
-        Registry clientRegistry = LocateRegistry.getRegistry();
+        Registry downloaderRegistry = LocateRegistry.createRegistry(getDownloaderRMIPortFromProperties());
+        Registry barrelRegistry = LocateRegistry.createRegistry(getBarrelRMIPortFromProperties());
+        Registry clientRegistry = LocateRegistry.createRegistry(getClientRMIPortFromProperties());
 
         barrelRegistry.rebind(getBarrelRegistryFromProperties(), this);
         downloaderRegistry.rebind(getDownloaderRegistryFromProperties(), this);
@@ -63,9 +63,20 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
     private static String getClientRegistryFromProperties() throws IOException {
         return loadProperties("./src/resources/System.properties").getProperty("clientRegistry");
     }
-
+    private static String getHostFromProperties() throws IOException {
+        return loadProperties("./src/resources/System.properties").getProperty("host");
+    }
     private static String getDownloaderRegistryFromProperties() throws IOException {
         return loadProperties("./src/resources/System.properties").getProperty("downloaderRegistry");
+    }
+    private static int getBarrelRMIPortFromProperties() throws IOException {
+        return Integer.parseInt(loadProperties("./src/resources/System.properties").getProperty("barrelPort"));
+    }
+    private static int getDownloaderRMIPortFromProperties() throws IOException {
+        return Integer.parseInt(loadProperties("./src/resources/System.properties").getProperty("downloaderPort"));
+    }
+    private static int getClientRMIPortFromProperties() throws IOException {
+        return Integer.parseInt(loadProperties("./src/resources/System.properties").getProperty("clientPort"));
     }
     /**
      * The `subscribeDownloader` method adds a downloader to a list and returns its index in the list.

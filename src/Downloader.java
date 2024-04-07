@@ -12,6 +12,8 @@ import javax.net.ssl.SSLHandshakeException;
 import java.io.*;
 import java.net.*;
 import java.rmi.*;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
@@ -31,7 +33,8 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
         super();
         while (true) {
             try {
-                gateway = (IGateDownloader) Naming.lookup(getGatewayDownloaderFromProperties());
+                Registry registry = LocateRegistry.getRegistry(getHostFromProperties(), getRMIPortFromProperties());
+                gateway = (IGateDownloader) registry.lookup(getGatewayDownloaderFromProperties());
             } catch (NotBoundException | MalformedURLException e) {
                 System.out.println("Properties file not properly setup.");
                 System.exit(0);
@@ -202,7 +205,12 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
     private static String getGatewayDownloaderFromProperties() throws IOException {
         return loadProperties("./src/resources/System.properties").getProperty("downloaderRegistry");
     }
-
+    private static int getRMIPortFromProperties() throws IOException {
+        return Integer.parseInt(loadProperties("./src/resources/System.properties").getProperty("downloaderPort"));
+    }
+    private static String getHostFromProperties() throws IOException {
+        return loadProperties("./src/resources/System.properties").getProperty("host");
+    }
     /**
      * The function `getPortFromProperties` parses and retrieves the port value from a properties file
      * located in the src/resources directory.

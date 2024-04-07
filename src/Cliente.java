@@ -27,7 +27,7 @@ public class Cliente extends UnicastRemoteObject implements ICliente {
         super();
         while(true) {
             try {
-                Registry registry = LocateRegistry.getRegistry("localhost", 1100);
+                Registry registry = LocateRegistry.getRegistry(getHostFromProperties(), getRMIPortFromProperties());
                 gateway = (IGateClient) registry.lookup(getGatewayClientFromProperties());
             } catch (NotBoundException ne) {
                 System.out.println("Property file not properly setup.");
@@ -80,6 +80,12 @@ public class Cliente extends UnicastRemoteObject implements ICliente {
     }
     private static String getGatewayClientFromProperties() throws IOException {
         return loadProperties("./src/resources/System.properties").getProperty("clientRegistry");
+    }
+    private static int getRMIPortFromProperties() throws IOException {
+        return Integer.parseInt(loadProperties("./src/resources/System.properties").getProperty("clientPort"));
+    }
+    private static String getHostFromProperties() throws IOException {
+        return loadProperties("./src/resources/System.properties").getProperty("host");
     }
     /**
      * The main function in Java takes user input to perform various actions such as searching, accessing

@@ -6,7 +6,6 @@
 
 import java.io.*;
 import java.net.*;
-import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -70,8 +69,8 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         sendIpAddress = getIpAddressFromProperties();
         while (true) {
             try {
-                //Registry registry = LocateRegistry.getRegistry("localhost", 1098);
-                gateway = (IGateBarrel) Naming.lookup(getBarrelGatewayFromProperties());
+                Registry registry = LocateRegistry.getRegistry(getHostFromProperties(), getRMIPortFromProperties());
+                gateway = (IGateBarrel) registry.lookup(getBarrelGatewayFromProperties());
 
             } catch (NotBoundException e) {
                 System.out.println("Properties file not properly setup.");
@@ -248,6 +247,12 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
             return -1;
         }
 
+    }
+    private static int getRMIPortFromProperties() throws IOException {
+        return Integer.parseInt(loadProperties("./src/resources/System.properties").getProperty("barrelPort"));
+    }
+    private static String getHostFromProperties() throws IOException {
+        return loadProperties("./src/resources/System.properties").getProperty("host");
     }
     private static Properties loadProperties(String filename) throws IOException {
         Properties properties = new Properties();
