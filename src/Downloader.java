@@ -17,7 +17,7 @@ import java.util.*;
 
 public class Downloader extends UnicastRemoteObject implements IDownloader {
     private static final String STOPWORDS_FILE = "stopwords_pt.txt";
-    private static final int MAX_MESSAGE_SIZE = 50 * 1024;
+    private static final int MAX_MESSAGE_SIZE = 40 * 1024;
     private static int downloaderID;
     private static int packetID = 0;
     private IGateDownloader gateway;
@@ -103,7 +103,7 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
                 //socket.leaveGroup(sendgroup);
                 //socket.joinGroup(receivegroup);
                 socket.joinGroup(sendgroup);
-                socket.setSoTimeout(7000);
+                socket.setSoTimeout(9000);
 
                 byte[] buf = new byte[1024];
                 DatagramPacket acknowledgmentPacket = new DatagramPacket(buf, buf.length, sendgroup, port);

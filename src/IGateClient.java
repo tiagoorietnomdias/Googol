@@ -12,5 +12,5 @@ public interface IGateClient extends Remote {
 
     List<String> getTop10Searches() throws RemoteException;
 
-    void insertInQueue(String link) throws RemoteException;
+    String insertInQueue(String link) throws RemoteException;
 }

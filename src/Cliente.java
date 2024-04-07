@@ -77,7 +77,8 @@ public class Cliente extends UnicastRemoteObject implements ICliente {
                 if (input.equalsIgnoreCase("3")) {
                     System.out.println("Exiting...");
                     System.exit(0);
-                    break;
+                    scanner.close();
+                    System.exit(0);
                 } else if (input.equalsIgnoreCase("1")) {
                     System.out.print("Escreva termo a pesquisar:");
                     String pesquisa = scanner.nextLine().toLowerCase();
@@ -119,6 +120,7 @@ public class Cliente extends UnicastRemoteObject implements ICliente {
                     }
                     List<String> erm=gateway.getTop10Searches();
                     for (String search:erm) System.out.println(search);
+                    System.out.println("\n");
                     /*Esta informação será atualizada apenas quando houver alterações. Pretende-se saber o estado do sistema, designadamente as 10 pesquisas mais comuns, a lista de Barrels ativos, e o
                      */
                     //10 pesquisas mais comuns
@@ -130,13 +132,12 @@ public class Cliente extends UnicastRemoteObject implements ICliente {
                     //meter linkQUeue
                     System.out.print("Link a inserir: ");
                     String erm=scanner.nextLine();
-                    gateway.insertInQueue(erm);
-
+                    String resultado=gateway.insertInQueue(erm);
+                    System.out.println(resultado);
                 }
 
 
             }
-            scanner.close();
         } catch (RuntimeException | RemoteException ex) {
             ex.printStackTrace();
         }

@@ -171,17 +171,17 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
      * before adding it to the queue. If the URL does not start with these prefixes, it prints a message
      */
     @Override
-    public void insertInQueue(String linkToInsert) throws RemoteException {
+    public String insertInQueue(String linkToInsert) throws RemoteException {
         try {
         if (linkToInsert.startsWith("https://") || linkToInsert.startsWith("http://")) {
             linkQueue.addFirst(linkToInsert);
-            System.out.println(linkQueue.getFirst());
+            return("Inserting"+linkQueue.getFirst());
         } else {
-            System.out.println("Please insert a valid URL");
+            return ("Please insert a valid URL");
         }
         } catch (NoSuchElementException e) {
             // Handle NoSuchElementException
-            System.out.println("Please retry! There was a server error");
+            return ("Please retry! There was a server error");
         }
     }
 
@@ -309,10 +309,16 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
             // System.out.println(coolResults.size());
 
 
-        } else {
-            int d = 26 / getActiveBarrels().size();
-            int barrelIndex = (26/d) - 1;
+        } else {//se for uma palavra
+            char firstLetter = wordToSearch.toLowerCase().charAt(0);
+            int numBarrels = getActiveBarrels().size();
+            int lettersPerBarrel = 26 / numBarrels;
+            int barrelIndex = (firstLetter - 'a') / lettersPerBarrel;
+            if (barrelIndex >= numBarrels) {
+                barrelIndex = numBarrels - 1;
+            }
 
+            System.out.println("Choosing barrel " + barrelIndex);
 
             results = barrels.get(barrelIndex).searchWord(wordToSearch);
             results.sort(Comparator.comparingInt(Link::getRank).reversed());
