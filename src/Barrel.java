@@ -3,12 +3,10 @@
  * including methods for searching and updating link and word maps.
  */
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.select.Elements;
 
 import java.io.*;
 import java.net.*;
+import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -69,14 +67,15 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
             shutdown(barrelID);
             System.out.println("Barrel " + barrelID + "just died. Here's proof: " + getBarrelStatus());
         }));
-        sendIpAddress = getIpFromProperties();
+        sendIpAddress = getIpAddressFromProperties();
         while (true) {
             try {
-                Registry registry = LocateRegistry.getRegistry("localhost", 1098);
-                gateway = (IGateBarrel) registry.lookup("GatewayBarrel");
+                //Registry registry = LocateRegistry.getRegistry("localhost", 1098);
+                gateway = (IGateBarrel) Naming.lookup(getBarrelGatewayFromProperties());
 
             } catch (NotBoundException e) {
-                throw new RuntimeException(e);
+                System.out.println("Properties file not properly setup.");
+                System.exit(0);
             } catch (RemoteException e) {
                 try {
                     System.out.println("Barrel" + barrelID + " couldn't connect, waiting 3 second and retrying...");
@@ -97,7 +96,7 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         } catch (IOException e) {
             System.out.println("Couldn't open " + PROPERTIES_FILE_PATH);
         }
-        sendIpAddress = getIpFromProperties();
+        sendIpAddress = getIpAddressFromProperties();
 
 
         filePath = "output" + barrelID + ".txt";
@@ -250,18 +249,20 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         }
 
     }
-
-    private static String getIpFromProperties() throws IOException {
-        try (FileInputStream input = new FileInputStream(PROPERTIES_FILE_PATH)) {
-            Properties properties = new Properties();
+    private static Properties loadProperties(String filename) throws IOException {
+        Properties properties = new Properties();
+        try (FileInputStream input = new FileInputStream(filename)) {
             properties.load(input);
-            return properties.getProperty("sendIpAddress");
         } catch (IOException e) {
-            System.out.println("Couldn't load \"" + PROPERTIES_FILE_PATH + "\". Make sure the file is available");
-            System.exit(1);
-            return null;
+            System.out.println("Couldn't load \"" + filename + "\". Make sure the file is available");
         }
-
+        return properties;
+    }
+    private static String getIpAddressFromProperties() throws IOException {
+        return loadProperties("./src/resources/System.properties").getProperty("sendIpAddress");
+    }
+    private static String getBarrelGatewayFromProperties() throws IOException {
+        return loadProperties("./src/resources/System.properties").getProperty("barrelRegistry");
     }
 
     /**
@@ -393,12 +394,10 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
                 wordLinkMap = gateway.getupdatedWordMap(barrelID);
                 linkLinkMap = gateway.getupdatedLinkMap(barrelID);
                 linkInfoMap = gateway.getupdatedInfoMap(barrelID);
+                System.out.println("Something missed but I am now updated");
 
-            } while (gateway.getupdatedWordMap(barrelID) != null && gateway.getupdatedLinkMap(barrelID) != null && gateway.getupdatedInfoMap(barrelID) != null);
+            } while (gateway.getupdatedWordMap(barrelID) == null || gateway.getupdatedLinkMap(barrelID) == null || gateway.getupdatedInfoMap(barrelID) == null);
             packetCounter.set(downloaderID, packetID);
-            //update
-            System.out.println("packetID" + packetID);
-            System.out.println("current index in array" + packetCounter.get(downloaderID));
         } else {
             acknowledgeReception(downloaderID);
             packetCounter.set(downloaderID, packetID);
@@ -570,8 +569,9 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         this.isdead = true;
         try {
             gateway.shutdownBarrel(barrelID, this);
-        } catch (RemoteException e) {
+        } catch (RemoteException | NullPointerException e) {
             System.out.println("Error shutting down the barrel");
+            System.exit(0);
         }
     }
 

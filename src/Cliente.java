@@ -2,6 +2,8 @@
  * The `Cliente` class in Java represents a client that interacts with a remote server using RMI for
  * tasks such as searching, managing active barrels, and inserting URLs into a queue.
  */
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
@@ -12,6 +14,7 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.Scanner;
 
 public class Cliente extends UnicastRemoteObject implements ICliente {
@@ -25,9 +28,10 @@ public class Cliente extends UnicastRemoteObject implements ICliente {
         while(true) {
             try {
                 Registry registry = LocateRegistry.getRegistry("localhost", 1100);
-                gateway = (IGateClient) registry.lookup("GatewayClient");
+                gateway = (IGateClient) registry.lookup(getGatewayClientFromProperties());
             } catch (NotBoundException ne) {
-                throw new RuntimeException(ne);
+                System.out.println("Property file not properly setup.");
+                System.exit(0);
             }catch (RemoteException e){
                 try{
                     Scanner scanner = new Scanner(System.in);
@@ -47,6 +51,8 @@ public class Cliente extends UnicastRemoteObject implements ICliente {
                 } catch (InterruptedException ie){
                     System.out.println("Downloader stopped while waiting");
                 }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
 
             break;
@@ -56,6 +62,25 @@ public class Cliente extends UnicastRemoteObject implements ICliente {
 
 
 
+    /**
+     * The function `loadProperties` loads properties from a file specified by the filename parameter.
+     *
+     * @param filename The `filename` parameter in the `loadProperties` method is a `String` that
+     *                 represents the name of the file from which properties need to be loaded.
+     * @return The method `loadProperties` is returning a `Properties` object.
+     */
+    private static Properties loadProperties(String filename) throws IOException {
+        Properties properties = new Properties();
+        try (FileInputStream input = new FileInputStream(filename)) {
+            properties.load(input);
+        } catch (IOException e) {
+            System.out.println("Couldn't load \"" + filename + "\". Make sure the file is available");
+        }
+        return properties;
+    }
+    private static String getGatewayClientFromProperties() throws IOException {
+        return loadProperties("./src/resources/System.properties").getProperty("clientRegistry");
+    }
     /**
      * The main function in Java takes user input to perform various actions such as searching, accessing
      * an admin page, inserting URLs into a queue, and displaying results.

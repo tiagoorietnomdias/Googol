@@ -31,10 +31,11 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
         super();
         while (true) {
             try {
-                gateway = (IGateDownloader) Naming.lookup("GatewayDownloader");
+                gateway = (IGateDownloader) Naming.lookup(getGatewayDownloaderFromProperties());
             } catch (NotBoundException | MalformedURLException e) {
-                throw new RuntimeException(e);
-            } catch (RemoteException e) {
+                System.out.println("Properties file not properly setup.");
+                System.exit(0);
+            } catch (IOException e) {
                 try {
                     System.out.println("Connection refused, waiting 3 second and retrying...");
                     Thread.sleep(3000);
@@ -169,7 +170,7 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
             String prefix = (type == 1) ? packetID + "|downloader|" + downloaderID + "|" + url + "|words|" + title + "|" : packetID + "|downloader|" + downloaderID + "|" + url + "|links|";
             packetID += 1;
             messageToSend.append(prefix);
-            while (currentIndex < wordsLength && getStringSizeInBytes(prefix + words.get(currentIndex)) < MAX_MESSAGE_SIZE) {
+            while (currentIndex < wordsLength && getStringSizeInBytes(messageToSend + words.get(currentIndex)) < MAX_MESSAGE_SIZE) {
                 messageToSend.append(words.get(currentIndex)).append("|");
                 currentIndex++;
             }
@@ -197,6 +198,9 @@ public class Downloader extends UnicastRemoteObject implements IDownloader {
 
     private static String getReceiveIpAddressFromProperties() throws IOException {
         return loadProperties("./src/resources/System.properties").getProperty("receiveIpAddress");
+    }
+    private static String getGatewayDownloaderFromProperties() throws IOException {
+        return loadProperties("./src/resources/System.properties").getProperty("downloaderRegistry");
     }
 
     /**

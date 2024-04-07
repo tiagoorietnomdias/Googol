@@ -2,6 +2,7 @@
  * The `Gateway` class in Java implements remote interfaces for managing downloaders, barrels, and
  * clients in a distributed system.
  */
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.rmi.*;
 import java.rmi.server.*;
@@ -26,24 +27,46 @@ public class Gateway extends UnicastRemoteObject implements IGateDownloader, IGa
 // does:
     public Gateway() throws IOException, AlreadyBoundException {
         super();
-        //String serverHostname = "192.168.245.239";
-        //System.setProperty("java.rmi.server.hostname", serverHostname);
+        System.setProperty("java.rmi.server.hostname", "192.168.1.83");
+
 
         queue = new int[10];
         downloaders = new ArrayList<>();
         barrels = new ArrayList<>();
         clients = new ArrayList<>();
-        Registry downloaderRegistry = LocateRegistry.createRegistry(1099);
-        Registry barrelRegistry = LocateRegistry.createRegistry(1098);
-        Registry clientRegistry = LocateRegistry.createRegistry(1100); //registry para o cliente
+        Registry downloaderRegistry = LocateRegistry.getRegistry();
+        Registry barrelRegistry = LocateRegistry.getRegistry();
+        Registry clientRegistry = LocateRegistry.getRegistry();
 
-
-        barrelRegistry.rebind("GatewayBarrel", this);
-        downloaderRegistry.rebind("GatewayDownloader", this);
-        clientRegistry.rebind("GatewayClient", this);
+        barrelRegistry.rebind(getBarrelRegistryFromProperties(), this);
+        downloaderRegistry.rebind(getDownloaderRegistryFromProperties(), this);
+        clientRegistry.rebind( getClientRegistryFromProperties(), this);
     }
 
 
+
+
+    private static Properties loadProperties(String filename) throws IOException {
+        Properties properties = new Properties();
+        try (FileInputStream input = new FileInputStream(filename)) {
+            properties.load(input);
+        } catch (IOException e) {
+            System.out.println("Couldn't load \"" + filename + "\". Make sure the file is available");
+        }
+        return properties;
+    }
+
+    private static String getBarrelRegistryFromProperties() throws IOException {
+        return loadProperties("./src/resources/System.properties").getProperty("barrelRegistry");
+    }
+
+    private static String getClientRegistryFromProperties() throws IOException {
+        return loadProperties("./src/resources/System.properties").getProperty("clientRegistry");
+    }
+
+    private static String getDownloaderRegistryFromProperties() throws IOException {
+        return loadProperties("./src/resources/System.properties").getProperty("downloaderRegistry");
+    }
     /**
      * The `subscribeDownloader` method adds a downloader to a list and returns its index in the list.
      *
