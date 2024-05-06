@@ -386,9 +386,10 @@ public class Barrel extends MulticastSocket implements IBarrel, Serializable {
         }
         int packetID = Integer.parseInt(parts[0]);
         int downloaderID = Integer.parseInt(parts[2]);
+        System.out.println("id"+downloaderID);
         String currentLink = parts[3];
         String type = parts[4];
-        if (downloaderID + 1 > packetCounter.size()) packetCounter.add(-1);
+        while(downloaderID + 1 > packetCounter.size()) packetCounter.add(-1);
 
 
         if (packetID - packetCounter.get(downloaderID) > 1) {//Falhou pelo menos um pacote
